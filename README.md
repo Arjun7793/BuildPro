@@ -280,16 +280,22 @@ Then start the app - Liquibase runs automatically on startup, before Hibernate's
 and seeds them from `002-seed-data.yaml`, in that order, every time (local and
 Railway) - no separate manual reseed step.
 
-**Liquibase version note:** `build.gradle` pins
-`implementation 'org.liquibase:liquibase-core:4.33.0'` explicitly, alongside
-`spring-boot-starter-liquibase`. Spring Boot 4.0.4's `spring-boot-liquibase`
-module manages `liquibase-core` at **5.0.2** by default, and that version
-currently has a real, unresolved incompatibility with Spring Boot 4's JPA
-autoconfiguration - it crashes app startup with `BeanCreationException:
-Circular depends-on relationship between 'liquibase' and
-'entityManagerFactory'`, on every startup, both locally and on Railway. Don't
-remove this pin (or bump it to a 5.x version) without confirming that
-incompatibility has actually been fixed upstream first.
+**Liquibase version note:** `build.gradle` forces
+`org.liquibase:liquibase-core` to **4.33.0** via `resolutionStrategy.force`.
+Spring Boot 4.0.4's `spring-boot-liquibase` module transitively pulls in
+`liquibase-core` **5.0.2**, and that version currently has a real, unresolved
+incompatibility with Spring Boot 4's JPA autoconfiguration - it crashes app
+startup with `BeanCreationException: Circular depends-on relationship between
+'liquibase' and 'entityManagerFactory'`, on every single startup attempt,
+both locally and on Railway. A plain `implementation
+'org.liquibase:liquibase-core:4.33.0'` declaration does **not** fix this -
+Gradle's default conflict resolution picks the *highest* version among all
+candidates for a dependency (direct or transitive), so the transitively-pulled
+5.0.2 wins over an explicitly declared but lower 4.33.0 regardless; that was
+tried first and Railway crashed identically even with that line in place.
+`resolutionStrategy.force` is what actually overrides the resolved version for
+every configuration. Don't remove this (or bump it to a 5.x version) without
+confirming the incompatibility has actually been fixed upstream first.
 
 ## Changelog
 

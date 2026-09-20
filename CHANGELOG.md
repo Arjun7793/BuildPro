@@ -48,11 +48,18 @@ All notable changes to this project are documented here.
   at version **5.0.2** by default, and Liquibase 5.x currently has a real,
   unresolved incompatibility with Spring Boot 4's JPA autoconfiguration
   wiring (other people combining Liquibase 5 with Spring Boot 4 hit the same
-  class of failure). Fixed by pinning an explicit
+  class of failure). First attempted fix - a plain
   `implementation 'org.liquibase:liquibase-core:4.33.0'` in `build.gradle`
-  (the last stable Liquibase 4.x release) alongside
-  `spring-boot-starter-liquibase` - an explicitly declared version overrides
-  the one Spring's dependency-management plugin would otherwise manage.
+  alongside `spring-boot-starter-liquibase` - also did **not** work: Railway
+  crashed with the byte-for-byte identical error even with that line in
+  place and deployed, because Gradle's default conflict resolution picks the
+  *highest* version among all candidates for a dependency (direct or
+  transitive), and the transitively-pulled 5.0.2 is higher than the
+  explicitly declared 4.33.0, so 5.0.2 kept winning regardless. Actually
+  fixed with a `configurations.all { resolutionStrategy { force
+  'org.liquibase:liquibase-core:4.33.0' } }` block, which genuinely forces
+  every configuration onto 4.33.0 (the last stable Liquibase 4.x release)
+  no matter what any other dependency asks for.
 - The public site's page title, header logo, and footer credit were hardcoded
   to "BuildPro"/"BuildPro Construction" - there was no way to change the site's
   actual name from the admin area, even though a "Company name" field already
