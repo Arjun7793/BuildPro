@@ -14,27 +14,105 @@ box-sizing:border-box;
 font-family:'Poppins',sans-serif;
 }
 
+html,body{
+overflow-x:hidden;
+}
+
 body{
-background:#222;
+background:#1c1c1c;
 color:#333;
 min-height:100vh;
 display:flex;
 align-items:center;
 justify-content:center;
-padding:20px;
+padding:24px;
+position:relative;
+overflow:hidden;
+}
+
+/* Two soft, blurred color blobs behind the card - one in the brand gold, one
+   in the teal already used for the dashboard's "this week" stat - so the
+   dark background has some depth instead of being flat black. Decorative
+   only, clipped by body's overflow:hidden so they never cause scrollbars. */
+body::before,
+body::after{
+content:'';
+position:absolute;
+border-radius:50%;
+filter:blur(90px);
+opacity:.28;
+z-index:0;
+pointer-events:none;
+}
+
+body::before{
+width:380px;
+height:380px;
+background:#ffb400;
+top:-140px;
+left:-110px;
+}
+
+body::after{
+width:340px;
+height:340px;
+background:#12786b;
+bottom:-140px;
+right:-110px;
 }
 
 .card{
+position:relative;
+z-index:1;
 background:white;
-border-radius:10px;
-box-shadow:0 10px 40px rgba(0,0,0,.35);
+border-radius:14px;
+box-shadow:0 20px 60px rgba(0,0,0,.45);
 width:100%;
 max-width:380px;
-padding:40px 36px;
+padding:40px 30px 34px;
+animation:cardIn .45s ease both;
+}
+
+@keyframes cardIn{
+from{opacity:0;transform:translateY(16px);}
+to{opacity:1;transform:translateY(0);}
+}
+
+@media(prefers-reduced-motion:reduce){
+.card{animation:none;}
+}
+
+.card::before{
+content:'';
+position:absolute;
+top:0;
+left:0;
+right:0;
+height:4px;
+border-radius:14px 14px 0 0;
+background:linear-gradient(90deg,#ffb400,#ffd166);
+}
+
+.badge{
+width:56px;
+height:56px;
+border-radius:50%;
+background:linear-gradient(150deg,#2b2b2b,#161616);
+border:2px solid #ffb400;
+display:flex;
+align-items:center;
+justify-content:center;
+margin:0 auto 18px;
+box-shadow:0 6px 16px rgba(0,0,0,.2);
+}
+
+.badge svg{
+width:26px;
+height:26px;
 }
 
 .logo{
-font-size:26px;
+font-size:24px;
 font-weight:700;
 color:#222;
 text-align:center;
@@ -52,8 +130,10 @@ color:#ffb400;
 .subtitle{
 text-align:center;
 color:#888;
-font-size:14px;
-margin-bottom:30px;
+font-size:13px;
+margin-bottom:28px;
+letter-spacing:.3px;
+text-transform:uppercase;
 }
 
 .field{
@@ -68,18 +148,78 @@ color:#555;
 margin-bottom:6px;
 }
 
+.input-wrap{
+position:relative;
+}
+
+.input-wrap svg{
+position:absolute;
+left:14px;
+top:50%;
+transform:translateY(-50%);
+width:16px;
+height:16px;
+color:#aaa;
+pointer-events:none;
+}
+
 .field input{
 width:100%;
-padding:12px 14px;
-border:1px solid #ccc;
-border-radius:5px;
-font-size:14px;
+padding:12px 14px 12px 40px;
+border:1px solid #ddd;
+border-radius:7px;
+font-size:15px;
 font-family:'Poppins',sans-serif;
+transition:border-color .2s, box-shadow .2s;
+}
+
+#password{
+padding-right:42px;
 }
 
 .field input:focus{
 outline:none;
 border-color:#ffb400;
+box-shadow:0 0 0 3px rgba(255,180,0,.16);
+}
+
+.toggle-password{
+position:absolute;
+right:8px;
+top:50%;
+transform:translateY(-50%);
+width:28px;
+height:28px;
+display:flex;
+align-items:center;
+justify-content:center;
+background:none;
+border:none;
+border-radius:5px;
+cursor:pointer;
+color:#999;
+}
+
+.toggle-password:hover{
+color:#555;
+background:#f2f2f2;
+}
+
+.toggle-password svg{
+width:17px;
+height:17px;
+}
+
+.toggle-password .icon-hide{
+display:none;
+}
+
+.toggle-password.is-visible .icon-show{
+display:none;
+}
+
+.toggle-password.is-visible .icon-hide{
+display:block;
 }
 
 .btn{
@@ -89,11 +229,12 @@ background:#ffb400;
 color:#222;
 font-weight:bold;
 border:none;
-border-radius:5px;
+border-radius:7px;
 cursor:pointer;
 font-size:15px;
-transition:.3s;
+transition:.25s;
 margin-top:6px;
+letter-spacing:.2px;
 }
 
 .btn:hover{
@@ -102,7 +243,7 @@ color:#ffb400;
 }
 
 .btn:disabled{
-opacity:.6;
+opacity:.65;
 cursor:default;
 }
 
@@ -111,7 +252,7 @@ font-size:13px;
 text-align:center;
 margin-bottom:18px;
 padding:10px 14px;
-border-radius:5px;
+border-radius:7px;
 }
 
 .message.error{
@@ -128,13 +269,49 @@ color:#31708f;
 display:block;
 text-align:center;
 margin-top:22px;
+padding-top:20px;
+border-top:1px solid #eee;
 font-size:13px;
 color:#999;
 text-decoration:none;
+transition:color .2s;
 }
 
 .back-link:hover{
 color:#555;
+}
+
+@media(min-width:769px){
+
+body{
+padding:40px;
+}
+
+.card{
+max-width:410px;
+padding:48px 40px 38px;
+border-radius:16px;
+}
+
+.badge{
+width:64px;
+height:64px;
+}
+
+.badge svg{
+width:30px;
+height:30px;
+}
+
+.logo{
+font-size:27px;
+}
+
+.subtitle{
+font-size:13px;
+margin-bottom:32px;
+}
+
 }
 
 </style>
@@ -142,6 +319,16 @@ color:#555;
 <body>
 
 <div class="card">
+
+<div class="badge">
+<svg viewBox="0 0 24 24" fill="none" stroke="#ffb400" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+<path d="M4 15.5C4 10.5 7.6 6.5 12 6.5s8 4 8 9"></path>
+<path d="M2.5 15.5h19"></path>
+<path d="M2.5 15.5v2.2a1 1 0 0 0 1 1h17a1 1 0 0 0 1-1v-2.2"></path>
+<path d="M12 6.5V4"></path>
+</svg>
+</div>
+
 <div class="logo"><span id="brand-name">BuildPro</span><span>.</span></div>
 <div class="subtitle">Admin sign in</div>
 
@@ -150,11 +337,34 @@ color:#555;
 <form id="login-form">
 <div class="field">
 <label for="username">Username</label>
+<div class="input-wrap">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+<path d="M4 20c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"></path>
+<circle cx="12" cy="7" r="4"></circle>
+</svg>
 <input type="text" id="username" name="username" autocomplete="username" required autofocus>
+</div>
 </div>
 <div class="field">
 <label for="password">Password</label>
+<div class="input-wrap">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+<rect x="4.5" y="10.5" width="15" height="10" rx="2"></rect>
+<path d="M8 10.5V7a4 4 0 0 1 8 0v3.5"></path>
+</svg>
 <input type="password" id="password" name="password" autocomplete="current-password" required>
+<button type="button" class="toggle-password" id="toggle-password" aria-label="Show password" aria-pressed="false">
+<svg class="icon-show" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z"></path>
+<circle cx="12" cy="12" r="3"></circle>
+</svg>
+<svg class="icon-hide" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+<path d="M3 3l18 18"></path>
+<path d="M10.6 5.2A10.6 10.6 0 0 1 12 5c6.4 0 10 7 10 7a17.6 17.6 0 0 1-3.4 4.3M6.6 6.6C4 8.3 2 12 2 12s3.6 7 10 7a9.7 9.7 0 0 0 3.4-.6"></path>
+<path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"></path>
+</svg>
+</button>
+</div>
 </div>
 <button type="submit" class="btn" id="submit-btn">Sign in</button>
 </form>
@@ -207,6 +417,18 @@ showMessage('Signed out.', 'info');
 }else if(params.has('error')){
 showMessage('Incorrect username or password.', 'error');
 }
+
+// Small show/hide toggle for the password field - purely a convenience, no
+// effect on the actual submitted value or the fetch logic below.
+var toggleBtn = document.getElementById('toggle-password');
+var passwordInput = document.getElementById('password');
+toggleBtn.addEventListener('click', function(){
+var showing = passwordInput.type === 'text';
+passwordInput.type = showing ? 'password' : 'text';
+toggleBtn.classList.toggle('is-visible', !showing);
+toggleBtn.setAttribute('aria-pressed', String(!showing));
+toggleBtn.setAttribute('aria-label', showing ? 'Show password' : 'Hide password');
+});
 
 form.addEventListener('submit', async function(e){
 e.preventDefault();
