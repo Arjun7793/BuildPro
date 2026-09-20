@@ -83,6 +83,24 @@ background:#222;
 color:#ffb400;
 }
 
+.btn:disabled{
+opacity:.5;
+cursor:default;
+background:#ffb400;
+color:#222;
+}
+
+.btn-secondary{
+background:none;
+border:1px solid #ccc;
+color:#555;
+}
+
+.btn-secondary:hover{
+background:#eee;
+color:#333;
+}
+
 .header-actions{
 display:flex;
 align-items:center;
@@ -95,6 +113,10 @@ text-decoration:none;
 font-size:14px;
 font-weight:500;
 transition:.3s;
+background:none;
+border:none;
+cursor:pointer;
+font-family:'Poppins',sans-serif;
 }
 
 .nav-link:hover{
@@ -178,6 +200,22 @@ color:#888;
 color:#d9534f;
 }
 
+.pagination{
+display:flex;
+align-items:center;
+justify-content:center;
+gap:16px;
+padding:20px;
+border-top:1px solid #eee;
+font-size:14px;
+color:#666;
+}
+
+.pagination button{
+padding:8px 16px;
+font-size:13px;
+}
+
 footer{
 background:#111;
 color:white;
@@ -222,6 +260,7 @@ margin-bottom:2px;
 <div class="logo">BuildPro<span>Admin &middot; Leads</span></div>
 <div class="header-actions">
 <a class="nav-link" href="/admin/content">Manage site content &rarr;</a>
+<button class="nav-link" id="logout-btn" type="button">Log out</button>
 <button class="btn" id="refresh-btn">Refresh</button>
 </div>
 </header>
@@ -238,6 +277,7 @@ margin-bottom:2px;
 <div id="content">
 <div class="loading-state">Loading leads&hellip;</div>
 </div>
+<div class="pagination" id="pagination" hidden></div>
 </div>
 </main>
 
@@ -249,6 +289,11 @@ document.getElementById('year').textContent = new Date().getFullYear();
 var content = document.getElementById('content');
 var countLabel = document.getElementById('count-label');
 var refreshBtn = document.getElementById('refresh-btn');
+var logoutBtn = document.getElementById('logout-btn');
+var paginationEl = document.getElementById('pagination');
+
+var currentPage = 0;
+var pageSize = 20;
 
 function escapeHtml(str){
 if(str === null || str === undefined) return '';
@@ -257,6 +302,19 @@ return String(str)
 .replace(/</g,'&lt;')
 .replace(/>/g,'&gt;')
 .replace(/"/g,'&quot;');
+}
+
+// The CSRF token Spring Security issues via a readable cookie (see
+// config/CsrfCookieFilter.java) - sent back as a header on every write, the
+// standard pattern for a JS-driven admin page using session/cookie login
+// instead of a server-rendered form.
+function getCookie(name){
+var match = document.cookie.match('(?:^|; )' + name + '=([^;]*)');
+return match ? decodeURIComponent(match[1]) : '';
+}
+
+function csrfHeaders(){
+return {'X-XSRF-TOKEN': getCookie('XSRF-TOKEN')};
 }
 
 // Fetched once at load from /api/config (backed by app.display-timezone in
@@ -291,32 +349,51 @@ var abbrev = new Intl.DateTimeFormat('en-US', {timeZone: displayTimezone, timeZo
 return formatted + (abbrev ? ' ' + abbrev.value : '');
 }
 
-async function loadLeads(){
+async function loadLeads(page){
+currentPage = page || 0;
 countLabel.textContent = 'Loading…';
 content.innerHTML = '<div class="loading-state">Loading leads&hellip;</div>';
+paginationEl.hidden = true;
 try{
-var res = await fetch('/api/leads', {credentials:'same-origin'});
+var res = await fetch('/api/leads?page=' + currentPage + '&size=' + pageSize, {credentials:'same-origin'});
 if(res.status === 401){
-content.innerHTML = '<div class="error-state">Not signed in as admin. Reload the page and enter the admin credentials when prompted.</div>';
+content.innerHTML = '<div class="error-state">Not signed in as admin. <a href="/admin/login">Sign in</a> to continue.</div>';
 countLabel.textContent = '';
 return;
 }
 if(!res.ok){
 throw new Error('Request failed with status ' + res.status);
 }
-var leads = await res.json();
-renderLeads(leads);
+var data = await res.json();
+// Spring Data's Page<T> JSON shape has changed across versions - modern Spring
+// Boot nests page metadata under a "page" object ({content, page: {size,
+// number, totalElements, totalPages}}), older versions put those fields
+// directly on the root object alongside "content". Handled defensively so
+// this keeps working across a Spring Boot upgrade either way.
+var leads = Array.isArray(data) ? data : (data.content || []);
+var meta = data.page || data;
+var pageInfo = {
+size: meta.size !== undefined ? meta.size : pageSize,
+number: meta.number !== undefined ? meta.number : currentPage,
+totalElements: meta.totalElements !== undefined ? meta.totalElements : leads.length,
+totalPages: meta.totalPages !== undefined ? meta.totalPages : 1
+};
+renderLeads(leads, pageInfo);
 }catch(err){
 content.innerHTML = '<div class="error-state">Couldn\'t load leads: ' + escapeHtml(err.message) + '</div>';
 countLabel.textContent = '';
 }
 }
 
-function renderLeads(leads){
-countLabel.textContent = leads.length + (leads.length === 1 ? ' lead' : ' leads');
+function renderLeads(leads, pageInfo){
+countLabel.textContent = pageInfo.totalElements + (pageInfo.totalElements === 1 ? ' lead' : ' leads') +
+(pageInfo.totalPages > 1 ? ' \u00b7 page ' + (pageInfo.number + 1) + ' of ' + pageInfo.totalPages : '');
 
 if(leads.length === 0){
-content.innerHTML = '<div class="empty-state">No leads yet. Submissions from the contact form will show up here.</div>';
+content.innerHTML = '<div class="empty-state">' +
+(currentPage > 0 ? 'No more leads on this page.' : 'No leads yet. Submissions from the contact form will show up here.') +
+'</div>';
+renderPagination(pageInfo);
 return;
 }
 
@@ -345,6 +422,25 @@ var id = btn.getAttribute('data-id');
 deleteLead(id, btn);
 });
 });
+
+renderPagination(pageInfo);
+}
+
+function renderPagination(pageInfo){
+if(pageInfo.totalPages <= 1){
+paginationEl.hidden = true;
+return;
+}
+paginationEl.hidden = false;
+paginationEl.innerHTML =
+'<button class="btn btn-secondary" id="prev-page"' + (pageInfo.number <= 0 ? ' disabled' : '') + '>&larr; Prev</button>' +
+'<span>Page ' + (pageInfo.number + 1) + ' of ' + pageInfo.totalPages + '</span>' +
+'<button class="btn btn-secondary" id="next-page"' + (pageInfo.number >= pageInfo.totalPages - 1 ? ' disabled' : '') + '>Next &rarr;</button>';
+
+var prevBtn = document.getElementById('prev-page');
+var nextBtn = document.getElementById('next-page');
+if(prevBtn && !prevBtn.disabled) prevBtn.addEventListener('click', function(){ loadLeads(pageInfo.number - 1); });
+if(nextBtn && !nextBtn.disabled) nextBtn.addEventListener('click', function(){ loadLeads(pageInfo.number + 1); });
 }
 
 async function deleteLead(id, btn){
@@ -352,11 +448,11 @@ if(!confirm('Delete this lead? This can\'t be undone.')) return;
 btn.disabled = true;
 btn.textContent = 'Deleting…';
 try{
-var res = await fetch('/api/leads/' + id, {method:'DELETE', credentials:'same-origin'});
+var res = await fetch('/api/leads/' + id, {method:'DELETE', credentials:'same-origin', headers: csrfHeaders()});
 if(!res.ok && res.status !== 204){
 throw new Error('Delete failed with status ' + res.status);
 }
-loadLeads();
+loadLeads(currentPage);
 }catch(err){
 alert('Couldn\'t delete lead: ' + err.message);
 btn.disabled = false;
@@ -364,8 +460,19 @@ btn.textContent = 'Delete';
 }
 }
 
-refreshBtn.addEventListener('click', loadLeads);
-loadConfig().then(loadLeads);
+async function logout(){
+try{
+await fetch('/admin/logout', {method:'POST', credentials:'same-origin', headers: csrfHeaders()});
+}catch(err){
+// Falls through to the redirect below either way - worst case the session
+// is still valid and the login page just asks again.
+}
+window.location.href = '/admin/login?logout';
+}
+
+refreshBtn.addEventListener('click', function(){ loadLeads(currentPage); });
+logoutBtn.addEventListener('click', logout);
+loadConfig().then(function(){ loadLeads(0); });
 </script>
 
 </body>

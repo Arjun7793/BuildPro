@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BuildPro Admin - Sign in</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+font-family:'Poppins',sans-serif;
+}
+
+body{
+background:#222;
+color:#333;
+min-height:100vh;
+display:flex;
+align-items:center;
+justify-content:center;
+padding:20px;
+}
+
+.card{
+background:white;
+border-radius:10px;
+box-shadow:0 10px 40px rgba(0,0,0,.35);
+width:100%;
+max-width:380px;
+padding:40px 36px;
+}
+
+.logo{
+font-size:26px;
+font-weight:700;
+color:#222;
+text-align:center;
+margin-bottom:4px;
+}
+
+.logo span{
+color:#ffb400;
+}
+
+.subtitle{
+text-align:center;
+color:#888;
+font-size:14px;
+margin-bottom:30px;
+}
+
+.field{
+margin-bottom:18px;
+}
+
+.field label{
+display:block;
+font-size:13px;
+font-weight:600;
+color:#555;
+margin-bottom:6px;
+}
+
+.field input{
+width:100%;
+padding:12px 14px;
+border:1px solid #ccc;
+border-radius:5px;
+font-size:14px;
+font-family:'Poppins',sans-serif;
+}
+
+.field input:focus{
+outline:none;
+border-color:#ffb400;
+}
+
+.btn{
+width:100%;
+padding:13px;
+background:#ffb400;
+color:#222;
+font-weight:bold;
+border:none;
+border-radius:5px;
+cursor:pointer;
+font-size:15px;
+transition:.3s;
+margin-top:6px;
+}
+
+.btn:hover{
+background:#222;
+color:#ffb400;
+}
+
+.btn:disabled{
+opacity:.6;
+cursor:default;
+}
+
+.message{
+font-size:13px;
+text-align:center;
+margin-bottom:18px;
+padding:10px 14px;
+border-radius:5px;
+}
+
+.message.error{
+background:#fdecea;
+color:#d9534f;
+}
+
+.message.info{
+background:#eef6ff;
+color:#31708f;
+}
+
+.back-link{
+display:block;
+text-align:center;
+margin-top:22px;
+font-size:13px;
+color:#999;
+text-decoration:none;
+}
+
+.back-link:hover{
+color:#555;
+}
+
+</style>
+</head>
+<body>
+
+<div class="card">
+<div class="logo">BuildPro<span>.</span></div>
+<div class="subtitle">Admin sign in</div>
+
+<div class="message" id="message" hidden></div>
+
+<form id="login-form">
+<div class="field">
+<label for="username">Username</label>
+<input type="text" id="username" name="username" autocomplete="username" required autofocus>
+</div>
+<div class="field">
+<label for="password">Password</label>
+<input type="password" id="password" name="password" autocomplete="current-password" required>
+</div>
+<button type="submit" class="btn" id="submit-btn">Sign in</button>
+</form>
+
+<a class="back-link" href="/">&larr; Back to the site</a>
+</div>
+
+<script>
+var form = document.getElementById('login-form');
+var messageEl = document.getElementById('message');
+var submitBtn = document.getElementById('submit-btn');
+
+function getCookie(name){
+var match = document.cookie.match('(?:^|; )' + name + '=([^;]*)');
+return match ? decodeURIComponent(match[1]) : '';
+}
+
+function showMessage(text, type){
+messageEl.textContent = text;
+messageEl.className = 'message ' + type;
+messageEl.hidden = false;
+}
+
+var params = new URLSearchParams(window.location.search);
+if(params.has('logout')){
+showMessage('Signed out.', 'info');
+}else if(params.has('error')){
+showMessage('Incorrect username or password.', 'error');
+}
+
+form.addEventListener('submit', async function(e){
+e.preventDefault();
+submitBtn.disabled = true;
+submitBtn.textContent = 'Signing in…';
+
+var body = new URLSearchParams();
+body.set('username', document.getElementById('username').value);
+body.set('password', document.getElementById('password').value);
+
+try{
+var res = await fetch('/admin/login', {
+method: 'POST',
+credentials: 'same-origin',
+redirect: 'follow',
+headers: {
+'Content-Type': 'application/x-www-form-urlencoded',
+'X-XSRF-TOKEN': getCookie('XSRF-TOKEN')
+},
+body: body.toString()
+});
+// A successful login redirects (and fetch follows it) to whichever admin
+// page the user was originally headed to, or /admin/leads by default. A
+// failed login redirects back to this same page with ?error.
+if(res.ok && res.url && res.url.indexOf('/admin/login') === -1){
+window.location.href = res.url;
+}else{
+showMessage('Incorrect username or password.', 'error');
+submitBtn.disabled = false;
+submitBtn.textContent = 'Sign in';
+}
+}catch(err){
+showMessage('Couldn\'t reach the server. Try again.', 'error');
+submitBtn.disabled = false;
+submitBtn.textContent = 'Sign in';
+}
+});
+</script>
+
+</body>
+</html>

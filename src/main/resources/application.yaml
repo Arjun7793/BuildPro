@@ -3,6 +3,12 @@ spring:
     name: buildpro
   profiles:
     active: local
+  data:
+    web:
+      pageable:
+        # Caps ?size= on paginated endpoints (currently just GET /api/leads) so
+        # a client can't request an unreasonably large page.
+        max-page-size: 100
   jpa:
     open-in-view: false
     properties:

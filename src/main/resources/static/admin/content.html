@@ -55,6 +55,10 @@ text-decoration:none;
 font-size:14px;
 font-weight:500;
 transition:.3s;
+background:none;
+border:none;
+cursor:pointer;
+font-family:'Poppins',sans-serif;
 }
 
 .nav-link:hover{
@@ -344,6 +348,16 @@ margin-bottom:14px;
 min-height:16px;
 }
 
+.field-invalid input,.field-invalid textarea{
+border-color:#d9534f;
+}
+
+.field-error-msg{
+color:#d9534f;
+font-size:12px;
+margin-top:4px;
+}
+
 @media(max-width:768px){
 main{padding:30px 5%;}
 table,thead,tbody,th,td,tr{display:block;}
@@ -379,6 +393,7 @@ margin-bottom:2px;
 <div class="logo">BuildPro<span>Admin &middot; Content</span></div>
 <div class="header-actions">
 <a class="nav-link" href="/admin/leads">View leads &rarr;</a>
+<button class="nav-link" id="logout-btn" type="button">Log out</button>
 </div>
 </header>
 
@@ -524,6 +539,19 @@ return String(str)
 .replace(/"/g,'&quot;');
 }
 
+// The CSRF token Spring Security issues via a readable cookie (see
+// config/CsrfCookieFilter.java) - sent back as a header on every write, the
+// standard pattern for a JS-driven admin page using session/cookie login
+// instead of a server-rendered form.
+function getCookie(name){
+var match = document.cookie.match('(?:^|; )' + name + '=([^;]*)');
+return match ? decodeURIComponent(match[1]) : '';
+}
+
+function csrfHeaders(){
+return {'X-XSRF-TOKEN': getCookie('XSRF-TOKEN')};
+}
+
 function buildSectionMarkup(section){
 return '' +
 '<div class="section" id="section-' + section.key + '">' +
@@ -569,6 +597,9 @@ var countEl = document.getElementById('count-' + section.key);
 bodyEl.innerHTML = '<div class="loading-state">Loading&hellip;</div>';
 try{
 var res = await fetch(section.path, {credentials:'same-origin'});
+if(res.status === 401){
+throw new Error('not signed in as admin - reload and sign in again');
+}
 if(!res.ok){
 throw new Error('Request failed with status ' + res.status);
 }
@@ -640,6 +671,24 @@ activeItem = null;
 modalForm.reset();
 }
 
+// Maps the ApiError.fieldErrors map from a 400 validation response ({title:
+// "title is required", ...}) onto the matching form fields, instead of only
+// showing the generic top-level message above the Save button.
+function applyFieldErrors(fieldErrors){
+if(!fieldErrors) return;
+Object.keys(fieldErrors).forEach(function(name){
+var input = modalForm.elements[name];
+if(!input) return;
+var fieldEl = input.closest('.field');
+if(!fieldEl) return;
+fieldEl.classList.add('field-invalid');
+var msg = document.createElement('div');
+msg.className = 'field-error-msg';
+msg.textContent = fieldErrors[name];
+fieldEl.appendChild(msg);
+});
+}
+
 document.getElementById('modal-close').addEventListener('click', closeModal);
 document.getElementById('modal-cancel').addEventListener('click', closeModal);
 overlay.addEventListener('click', function(e){
@@ -670,12 +719,15 @@ var method = activeItem ? 'PUT' : 'POST';
 var res = await fetch(url, {
 method: method,
 credentials: 'same-origin',
-headers: {'Content-Type': 'application/json'},
+headers: Object.assign({'Content-Type': 'application/json'}, csrfHeaders()),
 body: JSON.stringify(payload)
 });
 if(!res.ok){
 var errorBody = null;
 try{ errorBody = await res.json(); }catch(_){}
+if(errorBody && errorBody.fieldErrors){
+applyFieldErrors(errorBody.fieldErrors);
+}
 var message = (errorBody && errorBody.message) ? errorBody.message : ('Save failed with status ' + res.status);
 throw new Error(message);
 }
@@ -694,7 +746,7 @@ if(!confirm('Delete this ' + section.singular + '? This can\'t be undone.')) ret
 btn.disabled = true;
 btn.textContent = 'Deleting…';
 try{
-var res = await fetch(section.path + '/' + id, {method:'DELETE', credentials:'same-origin'});
+var res = await fetch(section.path + '/' + id, {method:'DELETE', credentials:'same-origin', headers: csrfHeaders()});
 if(!res.ok && res.status !== 204){
 throw new Error('Delete failed with status ' + res.status);
 }
@@ -705,6 +757,17 @@ btn.disabled = false;
 btn.textContent = 'Delete';
 }
 }
+
+async function logout(){
+try{
+await fetch('/admin/logout', {method:'POST', credentials:'same-origin', headers: csrfHeaders()});
+}catch(err){
+// Falls through to the redirect below either way.
+}
+window.location.href = '/admin/login?logout';
+}
+
+document.getElementById('logout-btn').addEventListener('click', logout);
 
 SECTIONS.forEach(loadSection);
 </script>

@@ -5,6 +5,22 @@ All notable changes to this project are documented here.
 ## [Unreleased]
 
 ### Added
+- Admin login moved from the browser's native HTTP Basic prompt to a real login
+  page (`/admin/login`, `static/admin/login.html`) backed by a session cookie, with
+  a working "Log out" button on both admin pages. `SecurityConfig` now uses
+  `formLogin`/`logout` instead of `httpBasic`.
+- CSRF protection is enabled for all admin writes (it was off, matching Basic
+  auth's stateless model) using Spring Security's cookie-based SPA pattern: a
+  readable `XSRF-TOKEN` cookie (`config/CsrfCookieFilter.java`) that the admin
+  pages send back as an `X-XSRF-TOKEN` header (`config/SpaCsrfTokenRequestHandler.java`).
+  `POST /api/leads` (the public contact form) is explicitly exempted, since
+  visitors have no admin session to carry a token in.
+- `GET /api/leads` is now paginated (`?page=`, `?size=`, default size 20, capped
+  at 100 via `spring.data.web.pageable.max-page-size`) instead of always returning
+  every lead. The admin leads page has Prev/Next controls and a page indicator.
+- The admin content page's add/edit modal now surfaces field-specific validation
+  errors (e.g. "title is required" under the Title field) from the API's
+  `fieldErrors` response, instead of only a generic "Save failed" message.
 - Admin-only content management page at `/admin/content` — add, edit, and delete
   services, stats, projects, testimonials, and company info from one page, styled to
   match the rest of the admin area. Each content type is a table with an "+ Add"
