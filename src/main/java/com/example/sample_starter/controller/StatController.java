@@ -3,16 +3,18 @@ package com.example.sample_starter.controller;
 import com.example.sample_starter.entity.Stat;
 import com.example.sample_starter.service.StatService;
 import io.swagger.v3.oas.annotations.Operation;
+import jakarta.validation.Valid;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/stats")
+@RequestMapping(value = "/api/stats", produces = MediaType.APPLICATION_JSON_VALUE, consumes = MediaType.APPLICATION_JSON_VALUE)
 @RequiredArgsConstructor
 @Tag(name = "Stats", description = "The animated counters in the stats band")
 public class StatController {
@@ -35,14 +37,14 @@ public class StatController {
 
     @PostMapping
     @Operation(summary = "Create a stat")
-    public ResponseEntity<Stat> create(@RequestBody Stat stat) {
+    public ResponseEntity<Stat> create(@Valid @RequestBody Stat stat) {
         Stat saved = statService.create(stat);
         return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
 
     @PutMapping("/{id}")
     @Operation(summary = "Update a stat")
-    public ResponseEntity<Stat> update(@PathVariable Long id, @RequestBody Stat update) {
+    public ResponseEntity<Stat> update(@PathVariable Long id, @Valid @RequestBody Stat update) {
         return statService.update(id, update)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());

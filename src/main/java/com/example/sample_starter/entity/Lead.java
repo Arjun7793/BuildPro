@@ -1,6 +1,8 @@
 package com.example.sample_starter.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -18,9 +20,11 @@ public class Lead {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @NotBlank(message = "name is required")
     @Column(nullable = false)
     private String name;
 
+    @Email(message = "email must be a valid email address")
     private String email;
 
     private String phone;

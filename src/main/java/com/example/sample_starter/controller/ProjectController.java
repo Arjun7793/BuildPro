@@ -3,16 +3,18 @@ package com.example.sample_starter.controller;
 import com.example.sample_starter.entity.ProjectItem;
 import com.example.sample_starter.service.ProjectItemService;
 import io.swagger.v3.oas.annotations.Operation;
+import jakarta.validation.Valid;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/projects")
+@RequestMapping(value = "/api/projects", produces = MediaType.APPLICATION_JSON_VALUE, consumes = MediaType.APPLICATION_JSON_VALUE)
 @RequiredArgsConstructor
 @Tag(name = "Projects", description = "The project showcase images")
 public class ProjectController {
@@ -35,14 +37,14 @@ public class ProjectController {
 
     @PostMapping
     @Operation(summary = "Create a project")
-    public ResponseEntity<ProjectItem> create(@RequestBody ProjectItem project) {
+    public ResponseEntity<ProjectItem> create(@Valid @RequestBody ProjectItem project) {
         ProjectItem saved = projectItemService.create(project);
         return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
 
     @PutMapping("/{id}")
     @Operation(summary = "Update a project")
-    public ResponseEntity<ProjectItem> update(@PathVariable Long id, @RequestBody ProjectItem update) {
+    public ResponseEntity<ProjectItem> update(@PathVariable Long id, @Valid @RequestBody ProjectItem update) {
         return projectItemService.update(id, update)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());

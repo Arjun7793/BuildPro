@@ -10,6 +10,34 @@ All notable changes to this project are documented here.
   - Raw OpenAPI spec: `http://localhost:8080/v3/api-docs`
   - `OpenApiConfig` sets the API title/description shown in the UI.
 - `CHANGELOG.md` (this file).
+- `RequestLoggingFilter` (`filter/RequestLoggingFilter.java`) — tags every request with a correlation
+  id (`X-Request-Id` header, generated if the caller doesn't send one), puts it in MDC so it shows up in
+  every log line for that request via the new `logging.pattern.console` pattern, and logs
+  method/path/status/duration. Filters out noisy paths (static assets, Swagger UI, `/v3/api-docs`) so
+  page loads don't flood the log with asset requests.
+- Global exception handling (`exception/GlobalExceptionHandler.java`, `@RestControllerAdvice`) — turns
+  validation failures, malformed JSON, data-integrity violations, and any unhandled exception into a
+  consistent `ApiError` JSON body (`timestamp`, `status`, `error`, `message`, `path`, and `fieldErrors`
+  for validation failures) instead of Spring's default whitelabel error page. Unhandled exceptions are
+  logged with the full stack trace before returning a generic 500 message to the caller.
+- `exception/ResourceNotFoundException.java` — available for any service/controller that would rather
+  throw than return `Optional.empty()`; the handler turns it into a 404.
+- Bean validation on the entities backing request bodies (`@NotBlank`/`@NotNull`/`@Email`), and `@Valid`
+  on every `POST`/`PUT` controller method, so the new validation-error handling actually gets exercised.
+
+### Added (JSON-only enforcement)
+- Every controller's `@RequestMapping` now declares `produces = MediaType.APPLICATION_JSON_VALUE` and
+  `consumes = MediaType.APPLICATION_JSON_VALUE` — the API only accepts JSON request bodies and only
+  returns JSON responses.
+- `GlobalExceptionHandler` now overrides `handleHttpMediaTypeNotSupported` (415, for a non-JSON
+  `Content-Type` on a `POST`/`PUT` body) and `handleHttpMediaTypeNotAcceptable` (406, for an `Accept`
+  header that excludes JSON), both returning the same `ApiError` shape as every other error.
+
+### Fixed
+- Swagger UI (`/swagger-ui.html`) and the raw OpenAPI doc (`/v3/api-docs`) are now disabled in
+  `application-prod.yaml` (`springdoc.api-docs.enabled=false`, `springdoc.swagger-ui.enabled=false`) —
+  they were on by default in every profile, including prod, which springdoc warns about on startup.
+  Still fully available under the `local` profile.
 
 ### Changed
 - Refactored every controller from talking to repositories directly to a service layer:

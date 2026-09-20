@@ -3,16 +3,18 @@ package com.example.sample_starter.controller;
 import com.example.sample_starter.entity.ServiceItem;
 import com.example.sample_starter.service.ServiceItemService;
 import io.swagger.v3.oas.annotations.Operation;
+import jakarta.validation.Valid;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/services")
+@RequestMapping(value = "/api/services", produces = MediaType.APPLICATION_JSON_VALUE, consumes = MediaType.APPLICATION_JSON_VALUE)
 @RequiredArgsConstructor
 @Tag(name = "Services", description = "The services shown in the Our Services section")
 public class ServiceController {
@@ -35,14 +37,14 @@ public class ServiceController {
 
     @PostMapping
     @Operation(summary = "Create a service")
-    public ResponseEntity<ServiceItem> create(@RequestBody ServiceItem service) {
+    public ResponseEntity<ServiceItem> create(@Valid @RequestBody ServiceItem service) {
         ServiceItem saved = serviceItemService.create(service);
         return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
 
     @PutMapping("/{id}")
     @Operation(summary = "Update a service")
-    public ResponseEntity<ServiceItem> update(@PathVariable Long id, @RequestBody ServiceItem update) {
+    public ResponseEntity<ServiceItem> update(@PathVariable Long id, @Valid @RequestBody ServiceItem update) {
         return serviceItemService.update(id, update)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());

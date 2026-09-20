@@ -3,9 +3,11 @@ package com.example.sample_starter.controller;
 import com.example.sample_starter.entity.Lead;
 import com.example.sample_starter.service.LeadService;
 import io.swagger.v3.oas.annotations.Operation;
+import jakarta.validation.Valid;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -14,7 +16,7 @@ import java.util.List;
 // Contact form submissions. Only create/read/delete are exposed here -
 // a submitted lead generally shouldn't be silently rewritten, so there's no PUT.
 @RestController
-@RequestMapping("/api/leads")
+@RequestMapping(value = "/api/leads", produces = MediaType.APPLICATION_JSON_VALUE, consumes = MediaType.APPLICATION_JSON_VALUE)
 @RequiredArgsConstructor
 @Tag(name = "Leads", description = "Contact form submissions")
 public class LeadController {
@@ -37,7 +39,7 @@ public class LeadController {
 
     @PostMapping
     @Operation(summary = "Submit the contact form")
-    public ResponseEntity<Lead> create(@RequestBody Lead lead) {
+    public ResponseEntity<Lead> create(@Valid @RequestBody Lead lead) {
         Lead saved = leadService.create(lead);
         return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }

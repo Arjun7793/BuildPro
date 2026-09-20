@@ -16,3 +16,7 @@ logging:
   level:
     root: INFO
     com.example.sample_starter: INFO
+  pattern:
+    # %X{requestId} pulls the correlation id RequestLoggingFilter puts in MDC,
+    # so every log line for one request can be grep'd together.
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%X{requestId}] %-5level %logger{36} - %msg%n"
