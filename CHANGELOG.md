@@ -5,6 +5,19 @@ All notable changes to this project are documented here.
 ## [Unreleased]
 
 ### Fixed
+- Railway deploy crash loop: the app built successfully but the container immediately exited with
+  `ls: cannot access '*/build/libs/*jar': No such file or directory`, then printed the `java` usage/help
+  text and exited — repeatedly, causing Railway's edge to return `502 Application failed to respond`
+  even though "Deployment successful" showed in the dashboard (that only reflects the build/deploy
+  pipeline steps, not whether the app is actually staying up). Root cause: Railpack's auto-detected
+  start command for Gradle projects assumes the jar lives under a subdirectory
+  (`*/build/libs/*.jar`, e.g. a Gradle multi-module layout), but this is a single-module project with
+  the jar directly at `build/libs/*.jar` — the glob never matched anything. Fixed by adding a
+  `railway.json` with an explicit `deploy.startCommand` that finds the built (non-`-plain`) jar under
+  `build/libs/` directly, plus a restart-on-failure policy.
+
+
+### Fixed
 - Railway build failure: `:bootJar FAILED` — "Main class name has not been configured and it could
   not be resolved from classpath". Root cause: `BuildproApplication.main` was declared
   `static void main(String[] args)` (missing `public`) after the earlier rename from
