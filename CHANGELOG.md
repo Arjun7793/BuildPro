@@ -4,6 +4,20 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+### Changed
+- Replaced the Gradle Java toolchain (which required auto-downloading a specific JDK on any machine
+  that didn't already have it) with plain `sourceCompatibility`/`targetCompatibility = 21` in
+  `build.gradle`. The `org.gradle.toolchains.foojay-resolver-convention` plugin added to fix the
+  previous Railway build failure did not actually resolve it — the identical "Toolchain download
+  repositories have not been configured" error recurred on the next build, pointing at Railway's build
+  sandbox not reaching the JDK download API at all. Removing the toolchain requirement sidesteps the
+  problem entirely: Gradle now just compiles with whatever JDK is already running it (your local JDK 25,
+  Railway's pre-installed JDK 21), with `sourceCompatibility`/`targetCompatibility` keeping the compiled
+  bytecode at a consistent, widely-supported level regardless of which JDK did the compiling. Removed
+  the now-unused foojay-resolver-convention plugin from `settings.gradle`.
+
+
+
 ### Fixed
 - Railway build failure: "Cannot find a Java installation ... matching languageVersion=25.
   Toolchain download repositories have not been configured." Railway's build container only ships
