@@ -1,0 +1,15 @@
+# Local development overrides
+server:
+  port: 8080
+
+logging:
+  level:
+    root: INFO
+    com.example.sample_starter: DEBUG
+
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/sample_starter
+    username: postgres
+    password: Hertzberger7793
+    driver-class-name: org.postgresql.Driver
