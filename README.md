@@ -93,12 +93,18 @@ non-JSON `Accept` headers get `406`).
 | Projects | `/api/projects` | GET, GET/{id}, POST\*, PUT/{id}\*, DELETE/{id}\* |
 | Testimonials | `/api/testimonials` | GET, GET/{id}, POST\*, PUT/{id}\*, DELETE/{id}\* |
 | Company info | `/api/company-info` | GET, GET/{id}, POST\*, PUT/{id}\*, DELETE/{id}\* |
-| Leads (contact form) | `/api/leads` | GET\* (paginated, `?page=&size=`), GET/{id}\*, POST, DELETE/{id}\* (no PUT) |
+| Leads (contact form) | `/api/leads` | GET\* (paginated, `?page=&size=`), GET/{id}\*, POST†, DELETE/{id}\* (no PUT) |
 | Combined content | `/api/content` | GET — everything above in one call, what the page itself fetches |
 
 \* Requires the admin login (see Admin area below). Reading content (`GET`) and
 submitting the contact form (`POST /api/leads`) stay public — the live site and its
 visitors depend on both.
+
+† `POST /api/leads` is public but rate-limited: at most 5 submissions per 10
+minutes per IP address (configurable via `LEADS_RATE_LIMIT_MAX_REQUESTS` /
+`LEADS_RATE_LIMIT_WINDOW_MINUTES`), to keep the open contact form from being spammed.
+Going over it gets a `429` with a `Retry-After` header instead of reaching the
+database — see `filter/LeadsRateLimitFilter.java`.
 
 Full curl examples with sample requests and responses are in the "buildpro API
 curl Reference" doc. Bad requests return a consistent JSON error shape via

@@ -37,3 +37,9 @@ admin:
 # code runs (that's UTC on Railway), just how times are shown to viewers.
 app:
   display-timezone: ${DISPLAY_TIMEZONE:Asia/Kolkata}
+  # Per-IP rate limit on POST /api/leads (the public contact form) - see
+  # filter/LeadsRateLimitFilter.java. At most max-requests submissions per
+  # window-minutes from the same address before a 429.
+  leads-rate-limit:
+    max-requests: ${LEADS_RATE_LIMIT_MAX_REQUESTS:5}
+    window-minutes: ${LEADS_RATE_LIMIT_WINDOW_MINUTES:10}

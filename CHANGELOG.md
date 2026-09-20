@@ -5,6 +5,16 @@ All notable changes to this project are documented here.
 ## [Unreleased]
 
 ### Added
+- Rate limit on `POST /api/leads` (the public contact form, the one write
+  endpoint that doesn't require admin login): at most 5 submissions per 10
+  minutes per IP address by default, configurable via
+  `LEADS_RATE_LIMIT_MAX_REQUESTS` / `LEADS_RATE_LIMIT_WINDOW_MINUTES`. Going over
+  it returns `429 Too Many Requests` with a `Retry-After` header instead of
+  reaching the database (`filter/LeadsRateLimitFilter.java`, in-memory per-IP
+  sliding window - fine for the single-instance deployment this runs as today).
+  The public contact form now also shows the API's actual error message (e.g.
+  this new rate-limit message, or a validation problem) instead of always a
+  generic "something went wrong".
 - Admin login moved from the browser's native HTTP Basic prompt to a real login
   page (`/admin/login`, `static/admin/login.html`) backed by a session cookie, with
   a working "Log out" button on both admin pages. `SecurityConfig` now uses

@@ -494,7 +494,17 @@ status.textContent = 'Thanks \u2014 we\'ll be in touch shortly.';
 status.style.color = 'green';
 form.reset();
 }else{
-status.textContent = 'Something went wrong \u2014 please try again.';
+// Show the API's own message when it sends one (e.g. a specific validation
+// problem, or "too many submissions" from the contact-form rate limit) -
+// falls back to a generic message if the body isn't the usual ApiError JSON.
+var friendlyMessage = 'Something went wrong \u2014 please try again.';
+try{
+var errorBody = await res.json();
+if(errorBody && errorBody.message){
+friendlyMessage = errorBody.message;
+}
+}catch(_){}
+status.textContent = friendlyMessage;
 status.style.color = 'crimson';
 }
 }catch(err){
