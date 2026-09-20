@@ -17,6 +17,11 @@ import java.io.IOException;
 @Controller
 public class AdminViewController {
 
+    @GetMapping("/admin")
+    public void dashboard(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        request.getRequestDispatcher("/admin/index.html").forward(request, response);
+    }
+
     @GetMapping("/admin/login")
     public void login(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         request.getRequestDispatcher("/admin/login.html").forward(request, response);

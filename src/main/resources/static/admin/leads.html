@@ -60,6 +60,43 @@ display:flex;
 justify-content:space-between;
 align-items:center;
 margin-bottom:20px;
+flex-wrap:wrap;
+gap:16px;
+}
+
+.filters{
+display:flex;
+flex-wrap:wrap;
+align-items:flex-end;
+gap:12px;
+margin-bottom:20px;
+}
+
+.filter-field{
+display:flex;
+flex-direction:column;
+gap:4px;
+}
+
+.filter-field label{
+font-size:12px;
+color:#888;
+text-transform:uppercase;
+letter-spacing:.5px;
+}
+
+.filter-field input{
+padding:9px 12px;
+border:1px solid #ddd;
+border-radius:5px;
+font-family:'Poppins',sans-serif;
+font-size:14px;
+min-width:160px;
+}
+
+.filter-field input:focus{
+outline:none;
+border-color:#ffb400;
 }
 
 .count{
@@ -259,6 +296,7 @@ margin-bottom:2px;
 <header>
 <div class="logo">BuildPro<span>Admin &middot; Leads</span></div>
 <div class="header-actions">
+<a class="nav-link" href="/admin">&larr; Dashboard</a>
 <a class="nav-link" href="/admin/content">Manage site content &rarr;</a>
 <button class="nav-link" id="logout-btn" type="button">Log out</button>
 <button class="btn" id="refresh-btn">Refresh</button>
@@ -268,6 +306,22 @@ margin-bottom:2px;
 <main>
 <div class="title">Contact form submissions</div>
 <div class="subtitle">Every lead captured through the public site's contact form, newest first.</div>
+
+<div class="filters">
+<div class="filter-field">
+<label for="filter-name">Name</label>
+<input type="text" id="filter-name" placeholder="Search by name&hellip;">
+</div>
+<div class="filter-field">
+<label for="filter-from">From</label>
+<input type="date" id="filter-from">
+</div>
+<div class="filter-field">
+<label for="filter-to">To</label>
+<input type="date" id="filter-to">
+</div>
+<button class="btn btn-secondary" id="clear-filters-btn" type="button">Clear filters</button>
+</div>
 
 <div class="toolbar">
 <div class="count" id="count-label">Loading&hellip;</div>
@@ -291,9 +345,14 @@ var countLabel = document.getElementById('count-label');
 var refreshBtn = document.getElementById('refresh-btn');
 var logoutBtn = document.getElementById('logout-btn');
 var paginationEl = document.getElementById('pagination');
+var nameFilterEl = document.getElementById('filter-name');
+var fromFilterEl = document.getElementById('filter-from');
+var toFilterEl = document.getElementById('filter-to');
+var clearFiltersBtn = document.getElementById('clear-filters-btn');
 
 var currentPage = 0;
 var pageSize = 20;
+var nameFilterTimer = null;
 
 function escapeHtml(str){
 if(str === null || str === undefined) return '';
@@ -349,13 +408,24 @@ var abbrev = new Intl.DateTimeFormat('en-US', {timeZone: displayTimezone, timeZo
 return formatted + (abbrev ? ' ' + abbrev.value : '');
 }
 
+function buildQuery(){
+var params = new URLSearchParams();
+params.set('page', currentPage);
+params.set('size', pageSize);
+var name = nameFilterEl.value.trim();
+if(name) params.set('name', name);
+if(fromFilterEl.value) params.set('from', fromFilterEl.value);
+if(toFilterEl.value) params.set('to', toFilterEl.value);
+return params.toString();
+}
+
 async function loadLeads(page){
 currentPage = page || 0;
 countLabel.textContent = 'Loading…';
 content.innerHTML = '<div class="loading-state">Loading leads&hellip;</div>';
 paginationEl.hidden = true;
 try{
-var res = await fetch('/api/leads?page=' + currentPage + '&size=' + pageSize, {credentials:'same-origin'});
+var res = await fetch('/api/leads?' + buildQuery(), {credentials:'same-origin'});
 if(res.status === 401){
 content.innerHTML = '<div class="error-state">Not signed in as admin. <a href="/admin/login">Sign in</a> to continue.</div>';
 countLabel.textContent = '';
@@ -390,8 +460,10 @@ countLabel.textContent = pageInfo.totalElements + (pageInfo.totalElements === 1 
 (pageInfo.totalPages > 1 ? ' \u00b7 page ' + (pageInfo.number + 1) + ' of ' + pageInfo.totalPages : '');
 
 if(leads.length === 0){
+var hasFilters = nameFilterEl.value.trim() || fromFilterEl.value || toFilterEl.value;
 content.innerHTML = '<div class="empty-state">' +
-(currentPage > 0 ? 'No more leads on this page.' : 'No leads yet. Submissions from the contact form will show up here.') +
+(hasFilters ? 'No leads match these filters.' :
+(currentPage > 0 ? 'No more leads on this page.' : 'No leads yet. Submissions from the contact form will show up here.')) +
 '</div>';
 renderPagination(pageInfo);
 return;
@@ -472,6 +544,24 @@ window.location.href = '/admin/login?logout';
 
 refreshBtn.addEventListener('click', function(){ loadLeads(currentPage); });
 logoutBtn.addEventListener('click', logout);
+
+// Debounced so typing a name doesn't fire a request per keystroke; date inputs
+// filter immediately since they change far less often. Any filter change resets
+// to page 0 - staying on, say, page 3 of a now-much-smaller filtered result
+// would just show an empty page.
+nameFilterEl.addEventListener('input', function(){
+clearTimeout(nameFilterTimer);
+nameFilterTimer = setTimeout(function(){ loadLeads(0); }, 350);
+});
+fromFilterEl.addEventListener('change', function(){ loadLeads(0); });
+toFilterEl.addEventListener('change', function(){ loadLeads(0); });
+clearFiltersBtn.addEventListener('click', function(){
+nameFilterEl.value = '';
+fromFilterEl.value = '';
+toFilterEl.value = '';
+loadLeads(0);
+});
+
 loadConfig().then(function(){ loadLeads(0); });
 </script>
 

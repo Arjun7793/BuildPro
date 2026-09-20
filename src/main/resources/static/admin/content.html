@@ -228,6 +228,103 @@ color:#888;
 font-size:14px;
 }
 
+.drag-handle{
+width:28px;
+color:#bbb;
+cursor:grab;
+font-size:16px;
+text-align:center;
+user-select:none;
+}
+
+tbody tr.draggable-row[draggable="true"]:active .drag-handle{
+cursor:grabbing;
+}
+
+tbody tr.dragging{
+opacity:.4;
+}
+
+tbody tr.drag-over{
+box-shadow:inset 0 2px 0 #ffb400;
+}
+
+.reorder-hint{
+font-size:12px;
+color:#999;
+font-weight:400;
+margin-left:8px;
+}
+
+.image-field-current{
+display:flex;
+align-items:center;
+gap:10px;
+margin-bottom:10px;
+}
+
+.image-field-current img{
+width:70px;
+height:52px;
+object-fit:cover;
+border-radius:5px;
+border:1px solid #eee;
+}
+
+.image-field-current span{
+font-size:12px;
+color:#888;
+}
+
+.field input[type="file"]{
+padding:8px;
+border:1px dashed #ccc;
+background:#fafafa;
+}
+
+.upload-progress{
+font-size:12px;
+color:#888;
+margin-top:6px;
+}
+
+.toast{
+position:fixed;
+top:24px;
+left:50%;
+transform:translateX(-50%) translateY(-12px);
+background:#222;
+color:white;
+padding:14px 24px;
+border-radius:8px;
+font-size:14px;
+font-weight:500;
+box-shadow:0 8px 24px rgba(0,0,0,.25);
+z-index:2000;
+opacity:0;
+pointer-events:none;
+transition:opacity .25s, transform .25s;
+display:flex;
+align-items:center;
+gap:10px;
+}
+
+.toast.visible{
+opacity:1;
+transform:translateX(-50%) translateY(0);
+}
+
+.toast::before{
+content:'\2713';
+color:#ffb400;
+font-weight:700;
+}
+
+.toast.toast-error::before{
+content:'!';
+color:#d9534f;
+}
+
 .error-state{
 color:#d9534f;
 }
@@ -392,6 +489,7 @@ margin-bottom:2px;
 <header>
 <div class="logo">BuildPro<span>Admin &middot; Content</span></div>
 <div class="header-actions">
+<a class="nav-link" href="/admin">&larr; Dashboard</a>
 <a class="nav-link" href="/admin/leads">View leads &rarr;</a>
 <button class="nav-link" id="logout-btn" type="button">Log out</button>
 </div>
@@ -405,6 +503,8 @@ margin-bottom:2px;
 </main>
 
 <footer>&copy; <span id="year"></span> BuildPro Construction &mdash; Admin area</footer>
+
+<div class="toast" id="toast" hidden></div>
 
 <div class="modal-overlay" id="modal-overlay" hidden>
 <div class="modal">
@@ -438,6 +538,7 @@ var SECTIONS = [
     title: 'Services',
     path: '/api/services',
     singular: 'service',
+    sortable: true,
     columns: [
       {key:'title', label:'Title'},
       {key:'description', label:'Description', text:true},
@@ -445,8 +546,7 @@ var SECTIONS = [
     ],
     fields: [
       {name:'title', label:'Title', type:'text', required:true},
-      {name:'description', label:'Description', type:'textarea'},
-      {name:'displayOrder', label:'Display order', type:'number', hint:'Lower numbers show first.'}
+      {name:'description', label:'Description', type:'textarea'}
     ]
   },
   {
@@ -454,6 +554,7 @@ var SECTIONS = [
     title: 'Stats',
     path: '/api/stats',
     singular: 'stat',
+    sortable: true,
     columns: [
       {key:'label', label:'Label'},
       {key:'targetValue', label:'Value'},
@@ -461,8 +562,7 @@ var SECTIONS = [
     ],
     fields: [
       {name:'label', label:'Label', type:'text', required:true, placeholder:'e.g. Projects Completed'},
-      {name:'targetValue', label:'Value', type:'number', required:true},
-      {name:'displayOrder', label:'Display order', type:'number', hint:'Lower numbers show first.'}
+      {name:'targetValue', label:'Value', type:'number', required:true}
     ]
   },
   {
@@ -470,15 +570,24 @@ var SECTIONS = [
     title: 'Projects',
     path: '/api/projects',
     singular: 'project',
+    sortable: true,
     columns: [
       {key:'imageUrl', label:'Image', image:true},
       {key:'title', label:'Title'},
       {key:'displayOrder', label:'Order'}
     ],
     fields: [
-      {name:'imageUrl', label:'Image URL', type:'text', required:true, placeholder:'https://...'},
-      {name:'title', label:'Title', type:'text'},
-      {name:'displayOrder', label:'Display order', type:'number', hint:'Lower numbers show first.'}
+      // Hybrid control (see openModal/handleProjectImageUpload): either paste a
+      // URL, or pick a file to upload after the item is saved - whichever the
+      // admin used most recently wins. The URL input is prefilled with the
+      // item's current imageUrl on edit so leaving it untouched doesn't wipe an
+      // uploaded photo (ProjectItemServiceImpl only clears the stored image
+      // when the incoming imageUrl actually changes to something else).
+      // Not marked required here - it's validated as "URL or a picked file"
+      // together (see the image-field check in the submit handler), which a
+      // plain HTML `required` attribute on just the text input can't express.
+      {name:'imageUrl', label:'Image URL', type:'image', placeholder:'https://...'},
+      {name:'title', label:'Title', type:'text', required:true}
     ]
   },
   {
@@ -486,6 +595,7 @@ var SECTIONS = [
     title: 'Testimonials',
     path: '/api/testimonials',
     singular: 'testimonial',
+    sortable: true,
     columns: [
       {key:'clientName', label:'Client'},
       {key:'message', label:'Message', text:true},
@@ -495,8 +605,7 @@ var SECTIONS = [
     fields: [
       {name:'clientName', label:'Client name', type:'text', required:true},
       {name:'message', label:'Message', type:'textarea'},
-      {name:'rating', label:'Rating (1-5)', type:'number'},
-      {name:'displayOrder', label:'Display order', type:'number', hint:'Lower numbers show first.'}
+      {name:'rating', label:'Rating (1-5)', type:'number'}
     ]
   },
   {
@@ -550,6 +659,27 @@ return match ? decodeURIComponent(match[1]) : '';
 
 function csrfHeaders(){
 return {'X-XSRF-TOKEN': getCookie('XSRF-TOKEN')};
+}
+
+// One consistent success/error toast for every create/update/delete across all
+// five sections, instead of some actions (image upload in particular) leaving
+// the admin guessing whether anything happened.
+var toastEl = document.getElementById('toast');
+var toastTimer = null;
+
+function showToast(message, isError){
+clearTimeout(toastTimer);
+toastEl.textContent = message;
+toastEl.classList.toggle('toast-error', !!isError);
+toastEl.hidden = false;
+// Reflow before adding the visible class so the transition actually plays,
+// rather than the toast just appearing already at its final state.
+void toastEl.offsetWidth;
+toastEl.classList.add('visible');
+toastTimer = setTimeout(function(){
+toastEl.classList.remove('visible');
+setTimeout(function(){ toastEl.hidden = true; }, 250);
+}, 3000);
 }
 
 function buildSectionMarkup(section){
@@ -630,13 +760,16 @@ bodyEl.innerHTML = '<div class="empty-state">Nothing here yet. Use "+ Add ' + se
 return;
 }
 
-var headerCells = section.columns.map(function(c){ return '<th>' + c.label + '</th>'; }).join('') + '<th></th>';
+var handleHeader = section.sortable ? '<th></th>' : '';
+var headerCells = handleHeader + section.columns.map(function(c){ return '<th>' + c.label + '</th>'; }).join('') + '<th></th>';
 
 var rows = items.map(function(item){
+var handleCell = section.sortable ? '<td class="drag-handle" title="Drag to reorder">&#8942;&#8942;</td>' : '';
 var cells = section.columns.map(function(col){
 return '<td data-label="' + col.label + '">' + renderCell(col, item) + '</td>';
 }).join('');
-return '<tr>' + cells +
+var dragAttrs = section.sortable ? ' class="draggable-row" draggable="true"' : '';
+return '<tr' + dragAttrs + ' data-id="' + item.id + '">' + handleCell + cells +
 '<td data-label="Action"><div class="row-actions">' +
 '<button class="icon-btn" data-edit="' + item.id + '" data-section="' + section.key + '">Edit</button>' +
 '<button class="icon-btn delete" data-delete="' + item.id + '" data-section="' + section.key + '">Delete</button>' +
@@ -644,22 +777,149 @@ return '<tr>' + cells +
 }).join('');
 
 bodyEl.innerHTML = '<table><thead><tr>' + headerCells + '</tr></thead><tbody>' + rows + '</tbody></table>';
+
+if(section.sortable){
+wireDragAndDrop(section, bodyEl);
 }
+}
+
+// Native HTML5 drag-and-drop, reusing the existing generic PUT {path}/{id}
+// endpoint for whichever items' displayOrder actually changed - no new backend
+// endpoint needed for this. Reordering is entirely client-side until drop:
+// only then are the affected rows persisted.
+var dragState = null;
+
+function wireDragAndDrop(section, bodyEl){
+var tbody = bodyEl.querySelector('tbody');
+if(!tbody) return;
+
+tbody.querySelectorAll('tr.draggable-row').forEach(function(row){
+row.addEventListener('dragstart', function(e){
+dragState = {section: section, id: row.getAttribute('data-id')};
+row.classList.add('dragging');
+e.dataTransfer.effectAllowed = 'move';
+try{ e.dataTransfer.setData('text/plain', row.getAttribute('data-id')); }catch(_){}
+});
+
+row.addEventListener('dragend', function(){
+row.classList.remove('dragging');
+tbody.querySelectorAll('tr.drag-over').forEach(function(r){ r.classList.remove('drag-over'); });
+dragState = null;
+});
+
+row.addEventListener('dragover', function(e){
+if(!dragState || dragState.section !== section) return;
+e.preventDefault();
+e.dataTransfer.dropEffect = 'move';
+if(row.getAttribute('data-id') !== dragState.id){
+row.classList.add('drag-over');
+}
+});
+
+row.addEventListener('dragleave', function(){
+row.classList.remove('drag-over');
+});
+
+row.addEventListener('drop', function(e){
+e.preventDefault();
+row.classList.remove('drag-over');
+if(!dragState || dragState.section !== section) return;
+var draggedId = dragState.id;
+var targetId = row.getAttribute('data-id');
+if(draggedId === targetId) return;
+reorderItems(section, draggedId, targetId);
+});
+});
+}
+
+async function reorderItems(section, draggedId, targetId){
+var items = section._items;
+var fromIndex = items.findIndex(function(i){ return String(i.id) === String(draggedId); });
+var toIndex = items.findIndex(function(i){ return String(i.id) === String(targetId); });
+if(fromIndex === -1 || toIndex === -1) return;
+
+var moved = items.splice(fromIndex, 1)[0];
+items.splice(toIndex, 0, moved);
+
+// Renumber sequentially in the new order, then persist only the items whose
+// displayOrder actually changed - usually just the ones between the old and
+// new position, not the whole list.
+var changed = [];
+items.forEach(function(item, index){
+var newOrder = index + 1;
+if(item.displayOrder !== newOrder){
+item.displayOrder = newOrder;
+changed.push(item);
+}
+});
+
+var bodyEl = document.getElementById('body-' + section.key);
+renderTable(section, bodyEl, items);
+
+try{
+for(var i = 0; i < changed.length; i++){
+var item = changed[i];
+var res = await fetch(section.path + '/' + item.id, {
+method: 'PUT',
+credentials: 'same-origin',
+headers: Object.assign({'Content-Type': 'application/json'}, csrfHeaders()),
+body: JSON.stringify(item)
+});
+if(!res.ok){
+throw new Error('Save failed with status ' + res.status);
+}
+}
+if(changed.length > 0){
+showToast('Order updated.');
+}
+}catch(err){
+showToast('Couldn\'t save the new order: ' + err.message + '. Reloading the current order.', true);
+loadSection(section);
+}
+}
+
+// Set when the admin picks a file in the image field's file input - read on
+// submit and, if present, uploaded via a separate multipart POST after the
+// item itself is created/updated (see handleImageUploadIfNeeded).
+var pendingImageFile = null;
 
 function openModal(section, item){
 activeSection = section;
 activeItem = item;
+pendingImageFile = null;
 modalTitle.textContent = (item ? 'Edit ' : 'Add ') + section.singular;
 modalError.textContent = '';
 
 modalBody.innerHTML = section.fields.map(function(field){
 var value = item ? item[field.name] : '';
+
+if(field.type === 'image'){
+var currentPreview = (item && value) ?
+'<div class="image-field-current"><img src="' + escapeHtml(value) + '" alt=""><span>Current image</span></div>' : '';
+return '<div class="field">' +
+'<label>' + field.label + ' *</label>' +
+currentPreview +
+'<input type="text" name="' + field.name + '" value="' + escapeHtml(value) + '"' +
+(field.placeholder ? ' placeholder="' + escapeHtml(field.placeholder) + '"' : '') + '>' +
+'<div class="hint">Paste a URL, or upload a photo below instead.</div>' +
+'<input type="file" accept="image/*" data-image-upload-for="' + field.name + '" style="margin-top:10px">' +
+'<div class="upload-progress" id="upload-progress" hidden></div>' +
+'</div>';
+}
+
 var input = field.type === 'textarea'
 ? '<textarea name="' + field.name + '"' + (field.required ? ' required' : '') + (field.placeholder ? ' placeholder="' + escapeHtml(field.placeholder) + '"' : '') + '>' + escapeHtml(value) + '</textarea>'
 : '<input type="' + field.type + '" name="' + field.name + '" value="' + escapeHtml(value) + '"' + (field.required ? ' required' : '') + (field.placeholder ? ' placeholder="' + escapeHtml(field.placeholder) + '"' : '') + '>';
 return '<div class="field"><label>' + field.label + (field.required ? ' *' : '') + '</label>' + input +
 (field.hint ? '<div class="hint">' + field.hint + '</div>' : '') + '</div>';
 }).join('');
+
+var fileInput = modalBody.querySelector('[data-image-upload-for]');
+if(fileInput){
+fileInput.addEventListener('change', function(){
+pendingImageFile = fileInput.files && fileInput.files[0] ? fileInput.files[0] : null;
+});
+}
 
 overlay.hidden = false;
 }
@@ -668,12 +928,25 @@ function closeModal(){
 overlay.hidden = true;
 activeSection = null;
 activeItem = null;
+pendingImageFile = null;
 modalForm.reset();
 }
 
 // Maps the ApiError.fieldErrors map from a 400 validation response ({title:
 // "title is required", ...}) onto the matching form fields, instead of only
 // showing the generic top-level message above the Save button.
+// Removes any field-invalid styling/messages left over from a previous failed
+// attempt in this same modal session, so retrying doesn't stack duplicate
+// error text under a field.
+function clearFieldErrors(){
+modalBody.querySelectorAll('.field-invalid').forEach(function(fieldEl){
+fieldEl.classList.remove('field-invalid');
+});
+modalBody.querySelectorAll('.field-error-msg').forEach(function(msg){
+msg.remove();
+});
+}
+
 function applyFieldErrors(fieldErrors){
 if(!fieldErrors) return;
 Object.keys(fieldErrors).forEach(function(name){
@@ -689,15 +962,67 @@ fieldEl.appendChild(msg);
 });
 }
 
+// The image field is really two inputs (a URL text box and a file picker)
+// standing in for one requirement: the project needs SOME image, one way or
+// the other. A plain HTML `required` on the text input alone would block a
+// perfectly valid file-only submission, so this checks both together and
+// reports the error the same way applyFieldErrors does (keyed by the URL
+// input's field name, since that's the visible field admins will look at).
+function validateImageField(section){
+var imageField = section.fields.find(function(f){ return f.type === 'image'; });
+if(!imageField) return true;
+var urlValue = modalForm.elements[imageField.name].value.trim();
+if(urlValue || pendingImageFile){
+return true;
+}
+applyFieldErrors(Object.fromEntries([[imageField.name, 'Add an image URL or upload a photo.']]));
+return false;
+}
+
 document.getElementById('modal-close').addEventListener('click', closeModal);
 document.getElementById('modal-cancel').addEventListener('click', closeModal);
 overlay.addEventListener('click', function(e){
 if(e.target === overlay) closeModal();
 });
 
+// Uploads the picked file to POST /api/projects/{id}/image after the project
+// itself has been created/updated - the upload endpoint replaces imageUrl with
+// the project's own serving path itself, so nothing here needs to reconcile
+// the two.
+async function handleImageUploadIfNeeded(section, savedItem){
+if(!pendingImageFile || !section.fields.some(function(f){ return f.type === 'image'; })) return savedItem;
+
+var progressEl = document.getElementById('upload-progress');
+if(progressEl){ progressEl.hidden = false; progressEl.textContent = 'Uploading image…'; }
+
+var formData = new FormData();
+formData.append('file', pendingImageFile);
+
+var res = await fetch(section.path + '/' + savedItem.id + '/image', {
+method: 'POST',
+credentials: 'same-origin',
+headers: csrfHeaders(),
+body: formData
+});
+if(!res.ok){
+var errorBody = null;
+try{ errorBody = await res.json(); }catch(_){}
+var message = (errorBody && errorBody.message) ? errorBody.message : ('Image upload failed with status ' + res.status);
+throw new Error(message);
+}
+return await res.json();
+}
+
 modalForm.addEventListener('submit', async function(e){
 e.preventDefault();
 if(!activeSection) return;
+
+clearFieldErrors();
+modalError.textContent = '';
+
+if(!validateImageField(activeSection)){
+return;
+}
 
 var payload = {};
 activeSection.fields.forEach(function(field){
@@ -708,6 +1033,22 @@ payload[field.name] = raw === '' ? null : Number(raw);
 payload[field.name] = raw === '' ? null : raw;
 }
 });
+
+// New items in a sortable section go to the end - display order is otherwise
+// only ever changed by dragging, not typed in, so there's no form field for it.
+// Scoped to sortable sections only: non-sortable entities (company-info) have
+// no displayOrder property at all, and Spring's default Jackson config rejects
+// unknown JSON properties on deserialization.
+if(activeSection.sortable){
+if(activeItem){
+payload.displayOrder = activeItem.displayOrder;
+}else{
+var maxOrder = (activeSection._items || []).reduce(function(max, i){
+return Math.max(max, i.displayOrder || 0);
+}, 0);
+payload.displayOrder = maxOrder + 1;
+}
+}
 
 modalSaveBtn.disabled = true;
 modalSaveBtn.textContent = 'Saving…';
@@ -731,8 +1072,22 @@ applyFieldErrors(errorBody.fieldErrors);
 var message = (errorBody && errorBody.message) ? errorBody.message : ('Save failed with status ' + res.status);
 throw new Error(message);
 }
+var savedItem = await res.json();
+await handleImageUploadIfNeeded(activeSection, savedItem);
+
+// Capture what we need before closeModal() clears activeSection/activeItem -
+// calling loadSection(activeSection) or checking activeItem AFTER closeModal()
+// was the bug that made saves (especially an image upload) look like they'd
+// silently done nothing: closeModal() had already nulled activeSection out,
+// so the reload threw immediately - and since the modal was already closed by
+// then, that error had nowhere visible to show either.
+var completedSection = activeSection;
+var wasEdit = !!activeItem;
+
 closeModal();
-loadSection(activeSection);
+showToast(completedSection.singular.charAt(0).toUpperCase() + completedSection.singular.slice(1) +
+(wasEdit ? ' updated.' : ' created.'));
+loadSection(completedSection);
 }catch(err){
 modalError.textContent = err.message;
 }finally{
@@ -751,8 +1106,9 @@ if(!res.ok && res.status !== 204){
 throw new Error('Delete failed with status ' + res.status);
 }
 loadSection(section);
+showToast(section.singular.charAt(0).toUpperCase() + section.singular.slice(1) + ' deleted.');
 }catch(err){
-alert('Couldn\'t delete: ' + err.message);
+showToast('Couldn\'t delete: ' + err.message, true);
 btn.disabled = false;
 btn.textContent = 'Delete';
 }

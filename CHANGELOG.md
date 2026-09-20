@@ -5,6 +5,52 @@ All notable changes to this project are documented here.
 ## [Unreleased]
 
 ### Fixed
+- Projects could be saved with no title and no image at all (neither a URL nor
+  an uploaded file), producing blank-looking cards on the public site.
+  `ProjectItem.title` is now `@NotBlank` (bean validation only, no DB migration
+  needed - the underlying column was never `NOT NULL`, so this is enforced at
+  the API layer, same mechanism as every other content type's title/name
+  field). The image field is validated as "a URL or a picked file, together" -
+  something the two separate inputs couldn't express with a plain `required`
+  attribute on just one of them - and blocks the save with a field-level error
+  if neither is present. Also fixed field-level error messages piling up
+  (duplicate text under a field) across repeated failed save attempts in the
+  same modal session.
+- Saving or deleting anything in the admin content page silently appeared to do
+  nothing - most visibly after a project image upload, but it affected every
+  section. Root cause: the success handler called `closeModal()` (which resets
+  `activeSection` to `null`) *before* `loadSection(activeSection)`, so the
+  reload threw immediately on a null reference - and since the modal had
+  already closed by then, that error had nowhere visible to appear. Fixed by
+  capturing the section/item state before closing the modal. Also added a
+  single consistent toast notification ("Service saved.", "Project deleted.",
+  "Order updated.", etc.) across every create/update/delete/reorder action in
+  the content page, instead of some paths showing nothing and others using a
+  jarring native `alert()`.
+- The admin dashboard's three stat numbers (total/today/this week) were all
+  plain black, hard to tell apart at a glance. Each now has its own accent
+  color (a top border + matching number color): dark neutral for total, amber
+  for today, teal for this week.
+- `GET /api/leads` (search/filter) failed every request with a 400 - a Spring
+  Data JPA 4.0 breaking change: `Specification.where(null)` *and*
+  `Specification.and(null)` both now reject `null` outright (`Assert.notNull`)
+  instead of treating it as "no filter" the way earlier versions did. The
+  first fix (switching `LeadServiceImpl.search()`'s starting point from
+  `Specification.where(...)` to `Specification.unrestricted()`) only got
+  halfway there, since `LeadSpecifications`' three filter methods still
+  returned `null` for an unsupplied filter, which then blew up on the very
+  next `.and(...)` call ("Other specification must not be null"). Fixed
+  properly by having those methods return `Specification.unrestricted()`
+  instead of `null` when their filter isn't supplied, so nothing null ever
+  reaches `.and()` in the first place.
+- Startup failed with `Ambiguous @ExceptionHandler method mapped for
+  MaxUploadSizeExceededException` - `GlobalExceptionHandler`'s own
+  `@ExceptionHandler(MaxUploadSizeExceededException.class)` method collided with
+  `ResponseEntityExceptionHandler`'s built-in handling for that exception type
+  (it's one of the types the framework already handles by default). Fixed by
+  overriding the framework's own protected hook,
+  `handleMaxUploadSizeExceededException(...)`, instead of declaring a second
+  `@ExceptionHandler` for the same exception - same 413 response as before.
 - Admin login was unreachable on Railway ("Failed to fetch" / a browser mixed-content
   block on `http://.../admin/login?error`): Railway terminates TLS at its edge and
   forwards to the app over plain HTTP internally, so Spring/Tomcat had no way to
@@ -15,6 +61,33 @@ All notable changes to this project are documented here.
   locally, since there's no proxy there to send those headers.
 
 ### Added
+- Admin dashboard at `/admin` (the new `defaultSuccessUrl` after login) - total/
+  today/this-week lead counts (`GET /api/leads/stats`, backed by a new
+  `LeadStats` DTO) plus quick links to the leads and content pages. All three
+  admin pages now cross-link to each other.
+- `GET /api/leads` gained `name`/`from`/`to` query params (case-insensitive
+  substring match on name; inclusive date-range filter on submission date, all
+  optional and combinable) via a new `LeadRepository`/`LeadSpecifications`
+  (`JpaSpecificationExecutor`). The admin leads page has a filter toolbar (name
+  search debounced, date inputs immediate, a "Clear filters" button) that resets
+  to page 0 on any change.
+- Drag-to-reorder for `displayOrder` on services, stats, projects, and
+  testimonials in the admin content page - drag a row by its handle instead of
+  typing a number. Dropped items are renumbered sequentially and only the rows
+  whose order actually changed are persisted, reusing the existing generic
+  `PUT {path}/{id}` endpoint (no new backend endpoint). New items in these four
+  sections are appended to the end automatically.
+- Image upload for Projects: the admin content page's Image field is now a
+  hybrid URL-or-upload control - paste a URL as before, or pick a photo to
+  upload via the new `POST /api/projects/{id}/image` (multipart, 5MB limit,
+  admin-only). Uploaded bytes are stored directly in Postgres (`ProjectItem.imageData`,
+  a `bytea` column, `@JsonIgnore`d so it never bloats a list response) and served
+  back raw via `GET /api/projects/{id}/image` (public, day-long cache header).
+  `ProjectItem.imageUrl` is no longer required at the entity level, since a
+  brand-new project has neither an URL nor an uploaded image for the moment
+  between creating it and uploading to it.
+  **Requires a one-time manual database migration before deploying this change
+  - see the "Database migration" section below.**
 - Rate limit on `POST /api/leads` (the public contact form, the one write
   endpoint that doesn't require admin login): at most 5 submissions per 10
   minutes per IP address by default, configurable via

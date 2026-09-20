@@ -11,4 +11,5 @@ public interface ProjectItemService {
     ProjectItem create(ProjectItem project);
     Optional<ProjectItem> update(Long id, ProjectItem update);
     boolean delete(Long id);
+    Optional<ProjectItem> storeImage(Long id, byte[] data, String contentType);
 }

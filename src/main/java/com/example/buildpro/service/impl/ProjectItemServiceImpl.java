@@ -36,6 +36,16 @@ public class ProjectItemServiceImpl implements ProjectItemService {
             existing.setImageUrl(update.getImageUrl());
             existing.setTitle(update.getTitle());
             existing.setDisplayOrder(update.getDisplayOrder());
+
+            // If the incoming imageUrl isn't this project's own upload endpoint,
+            // the admin is pointing it at an external URL (or clearing it) - drop
+            // any previously uploaded bytes rather than leaving them orphaned in
+            // the database, and so a later re-upload starts clean.
+            String ownImagePath = "/api/projects/" + id + "/image";
+            if (!ownImagePath.equals(update.getImageUrl())) {
+                existing.setImageData(null);
+                existing.setImageContentType(null);
+            }
             return projectItemRepository.save(existing);
         });
     }
@@ -47,5 +57,15 @@ public class ProjectItemServiceImpl implements ProjectItemService {
         }
         projectItemRepository.deleteById(id);
         return true;
+    }
+
+    @Override
+    public Optional<ProjectItem> storeImage(Long id, byte[] data, String contentType) {
+        return projectItemRepository.findById(id).map(existing -> {
+            existing.setImageData(data);
+            existing.setImageContentType(contentType);
+            existing.setImageUrl("/api/projects/" + id + "/image");
+            return projectItemRepository.save(existing);
+        });
     }
 }

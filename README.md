@@ -136,21 +136,35 @@ can be found together.
 
 ## Admin area
 
-Three admin-only pages, cross-linked to each other, all guarded by a single admin
+Four admin-only pages, cross-linked to each other, all guarded by a single admin
 account:
 
 - **`/admin/login`** — sign in with the admin username/password. A real login page
   (not the browser's native HTTP Basic prompt), backed by a session cookie — so
   there's an actual "Log out" button, unlike Basic auth, where the browser just
   keeps resending cached credentials forever with no way to sign out.
+- **`/admin`** — dashboard: total/today/this-week lead counts (`GET /api/leads/stats`)
+  and quick links to the leads and content pages. This is where a successful login
+  now lands (`defaultSuccessUrl`), unless you were redirected here mid-visit to
+  another admin page, in which case you land back there instead.
 - **`/admin/leads`** — view and delete contact form submissions, paginated (20 per
-  page, newest first, with Prev/Next controls).
+  page, newest first, with Prev/Next controls) and filterable by name (substring,
+  debounced) and/or a from/to submission-date range (`GET /api/leads?name=&from=&to=`).
 - **`/admin/content`** — add, edit, and delete everything shown on the public site:
   services, stats, projects, testimonials, and company info. Each section is a table
-  with an "+ Add" button; editing opens a small form in a modal, which now also
-  shows field-specific validation errors (e.g. "title is required" under the Title
-  field) instead of only a generic failure message. Changes go live immediately,
-  since the public page reads the same data via `/api/content`.
+  with an "+ Add" button; editing opens a small form in a modal, which shows
+  field-specific validation errors (e.g. "title is required" under the Title field)
+  instead of only a generic failure message. Changes go live immediately, since the
+  public page reads the same data via `/api/content`.
+  - Services, stats, projects, and testimonials support drag-to-reorder: drag a row
+    by its handle to change `displayOrder` instead of typing a number. Only the
+    rows whose order actually changed are saved (existing `PUT {path}/{id}`, no new
+    endpoint); new items are appended to the end automatically.
+  - Projects have an image upload option: the Image field takes either a pasted URL
+    or a picked file. An uploaded file is sent to `POST /api/projects/{id}/image`
+    (multipart, 5MB max) and stored as bytes directly in Postgres, served back via
+    `GET /api/projects/{id}/image` (public, cached a day). See "Database migration"
+    below — this needs a one-time schema change before it'll work.
 
 All three are clean-URL forwards to their static pages (`/admin/login.html`,
 `/admin/leads.html`, `/admin/content.html`, see `AdminViewController`) so the address
@@ -204,6 +218,30 @@ against a Railway-managed Postgres service. Live URL:
   single-module layout, so we point it at `build/libs/*.jar` directly.
 - Full write-up of the deployment steps, the issues hit along the way, and how each
   was fixed is in the "buildpro Deployment Guide" doc.
+
+### Database migration (required for the project image upload feature)
+
+`spring.jpa.hibernate.ddl-auto` is `validate` in both profiles (see
+`application-local.yaml` / `application-prod.yaml`) — this app has no Flyway/Liquibase,
+so the schema is never changed automatically. `ProjectItem` gained two new columns
+(`image_data`, `image_content_type`) and `image_url` is no longer `NOT NULL`, so
+**before deploying this change**, run the following once against the target Postgres
+database (for Railway: open the Postgres service → Data / Query tab, or connect with
+`psql` using the connection string from the Connect tab):
+
+```sql
+ALTER TABLE projects
+    ADD COLUMN IF NOT EXISTS image_data BYTEA,
+    ADD COLUMN IF NOT EXISTS image_content_type VARCHAR(255);
+
+ALTER TABLE projects
+    ALTER COLUMN image_url DROP NOT NULL;
+```
+
+Deploying the new code before running this will crash on startup (`ddl-auto: validate`
+fails fast on a schema mismatch, same failure mode as if a column were simply missing).
+Run it against local Postgres too if you use `ddl-auto: validate` locally rather than
+the `#update` fallback in `application-local.yaml`.
 
 ## Changelog
 

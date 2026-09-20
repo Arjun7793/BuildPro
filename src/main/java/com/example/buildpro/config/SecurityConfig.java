@@ -82,12 +82,17 @@ public class SecurityConfig {
                         // never be reached.
                         .requestMatchers(HttpMethod.POST, "/api/leads").permitAll()
                         .requestMatchers("/admin/login", "/admin/login.html").permitAll()
-                        .requestMatchers("/admin/**").authenticated()
+                        .requestMatchers("/admin", "/admin/**").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/leads", "/api/leads/**").authenticated()
                         .requestMatchers(HttpMethod.DELETE, "/api/leads/**").authenticated()
                         .requestMatchers(HttpMethod.POST,
                                 "/api/services", "/api/stats", "/api/projects",
                                 "/api/testimonials", "/api/company-info").authenticated()
+                        // Project image upload lives under /api/projects/{id}/image -
+                        // not covered by the bare "/api/projects" match above, so it
+                        // needs its own rule or it would fall through to the public
+                        // catch-all at the bottom.
+                        .requestMatchers(HttpMethod.POST, "/api/projects/*/image").authenticated()
                         .requestMatchers(HttpMethod.PUT,
                                 "/api/services/**", "/api/stats/**", "/api/projects/**",
                                 "/api/testimonials/**", "/api/company-info/**").authenticated()
@@ -117,7 +122,7 @@ public class SecurityConfig {
                         // request" (the admin page the user was actually trying to
                         // reach before being sent to log in) - so logging in from a
                         // redirect lands you back where you started, not always leads.
-                        .defaultSuccessUrl("/admin/leads", false)
+                        .defaultSuccessUrl("/admin", false)
                         .failureUrl("/admin/login?error")
                 )
                 .logout(logout -> logout
