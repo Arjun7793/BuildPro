@@ -17,7 +17,7 @@ from that API at load time.
 
 ```
 src/main/java/com/example/buildpro/
-  entity/       JPA entities (ServiceItem, Stat, ProjectItem, Testimonial, CompanyInfo, Lead)
+  entity/       JPA entities (ServiceItem, Stat, ProjectItem, Testimonial, CompanyInfo, HeroSection, AboutSection, Lead)
   repository/   Spring Data JPA repositories
   service/      Service interfaces
   service/impl/ Service implementations (only these talk to repositories)
@@ -93,6 +93,8 @@ non-JSON `Accept` headers get `406`).
 | Projects | `/api/projects` | GET, GET/{id}, POST\*, PUT/{id}\*, DELETE/{id}\* |
 | Testimonials | `/api/testimonials` | GET, GET/{id}, POST\*, PUT/{id}\*, DELETE/{id}\* |
 | Company info | `/api/company-info` | GET, GET/{id}, POST\*, PUT/{id}\*, DELETE/{id}\* |
+| Home / Cover section | `/api/hero-section` | GET, GET/{id}, POST\*, PUT/{id}\*, DELETE/{id}\*, POST/{id}/image\* (upload), GET/{id}/image |
+| About Us section | `/api/about-section` | GET, GET/{id}, POST\*, PUT/{id}\*, DELETE/{id}\*, POST/{id}/image\* (upload), GET/{id}/image |
 | Leads (contact form) | `/api/leads` | GET\* (paginated, `?page=&size=`), GET/{id}\*, POST†, DELETE/{id}\* (no PUT) |
 | Combined content | `/api/content` | GET — everything above in one call, what the page itself fetches |
 
@@ -151,20 +153,27 @@ account:
   page, newest first, with Prev/Next controls) and filterable by name (substring,
   debounced) and/or a from/to submission-date range (`GET /api/leads?name=&from=&to=`).
 - **`/admin/content`** — add, edit, and delete everything shown on the public site:
-  services, stats, projects, testimonials, and company info. Each section is a table
-  with an "+ Add" button; editing opens a small form in a modal, which shows
-  field-specific validation errors (e.g. "title is required" under the Title field)
-  instead of only a generic failure message. Changes go live immediately, since the
-  public page reads the same data via `/api/content`.
+  the Home/Cover banner, About Us, services, stats, projects, testimonials, and
+  company info. Each section is a table with an "+ Add" button; editing opens a
+  small form in a modal, which shows field-specific validation errors (e.g. "title
+  is required" under the Title field) instead of only a generic failure message.
+  Changes go live immediately, since the public page reads the same data via
+  `/api/content`.
+  - Home/Cover and About Us (like Company info) are singletons: there's always
+    exactly one row, so their table only offers Edit — no "+ Add" or Delete.
   - Services, stats, projects, and testimonials support drag-to-reorder: drag a row
     by its handle to change `displayOrder` instead of typing a number. Only the
     rows whose order actually changed are saved (existing `PUT {path}/{id}`, no new
     endpoint); new items are appended to the end automatically.
-  - Projects have an image upload option: the Image field takes either a pasted URL
-    or a picked file. An uploaded file is sent to `POST /api/projects/{id}/image`
-    (multipart, 5MB max) and stored as bytes directly in Postgres, served back via
-    `GET /api/projects/{id}/image` (public, cached a day). See "Database migration"
-    below — this needs a one-time schema change before it'll work.
+  - Projects, Home/Cover's background image, and About Us's image all have the same
+    hybrid image upload option: the Image field takes either a pasted URL or a
+    picked file. An uploaded file is sent to `POST {path}/{id}/image` (multipart,
+    5MB max) and stored as bytes directly in Postgres, served back via
+    `GET {path}/{id}/image` (public, cached a day) — e.g.
+    `POST /api/projects/{id}/image`, `POST /api/hero-section/{id}/image`,
+    `POST /api/about-section/{id}/image`. Switching the field back to a pasted URL
+    (or clearing it) drops the previously uploaded bytes on save. See "Database
+    migrations" below.
 
 All three are clean-URL forwards to their static pages (`/admin/login.html`,
 `/admin/leads.html`, `/admin/content.html`, see `AdminViewController`) so the address
@@ -191,8 +200,13 @@ visitors submitting it have no admin session to carry a token in.
 The `GET`/`DELETE` endpoints on `/api/leads` require the same admin login (submitting
 the form via `POST /api/leads` stays public, since visitors use it with no account).
 Likewise, `POST`/`PUT`/`DELETE` on `/api/services`, `/api/stats`, `/api/projects`,
-`/api/testimonials`, and `/api/company-info` require the admin login — `GET` on all
-of them stays public, since the live site's own `/api/content` call depends on it.
+`/api/testimonials`, `/api/company-info`, `/api/hero-section`, and `/api/about-section`
+require the admin login — `GET` on all of them stays public, since the live site's
+own `/api/content` call depends on it. The `POST {path}/{id}/image` upload
+sub-endpoints (projects, hero-section, about-section) each have their own explicit
+authenticated rule in `SecurityConfig`, since a base resource's POST rule doesn't
+cover a nested sub-path; `GET {path}/{id}/image` stays public alongside every
+other `GET`.
 A fetch call from the admin pages that isn't signed in (e.g. an expired session)
 gets a clean `401` rather than a redirect, so the page can show "not signed in"
 instead of a broken response; a direct browser visit to a protected admin page still
@@ -231,6 +245,14 @@ no `data.sql`/`spring.sql.init` anymore. Changesets live under
 - `001-baseline-schema.yaml` - `createTable` for all 6 tables.
 - `002-seed-data.yaml` - the original static site's demo content (services,
   stats, demo projects, testimonials, a placeholder company info row).
+- `003-hero-about-sections.yaml` - `createTable` for `hero_section` and
+  `about_section` (the Home/Cover banner and About Us admin sections),
+  seeded with the copy/images that were previously hardcoded in
+  `index.html`.
+- `004-hero-about-image-upload.yaml` - `addColumn` on `hero_section` and
+  `about_section` (`*_image_data` `BYTEA`, `*_image_content_type`
+  `VARCHAR(255)`), so both sections support the same upload-a-file image
+  option as Projects, instead of only a pasted URL.
 
 Spring Boot runs pending changesets automatically on every startup (local and
 Railway) and tracks which ones have already run per-database in its

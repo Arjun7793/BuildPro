@@ -415,6 +415,80 @@ All notable changes to this project are documented here.
 - Every REST endpoint now carries `@Tag`/`@Operation` annotations so they show up grouped and described
   in Swagger UI.
 
+### Added
+- The admin content page (`/admin/content`) previously had no way to edit the
+  public site's very first section (the full-bleed "Home/Cover" banner under
+  the header — headline, subheading, button text, background image) or the
+  "About Us" section (heading, body copy, image) — both were hardcoded
+  straight into `static/index.html` with no admin config behind them at all.
+  Added two new singleton-style sections, `HeroSection` and `AboutSection`
+  (entity + repository + service/service-impl + `@RestController`, same
+  shape as the existing `CompanyInfo` singleton), backed by a new changeset
+  `003-hero-about-sections.yaml` (`hero_section` / `about_section` tables,
+  seeded with the exact copy and images that were previously hardcoded, so
+  the public page's output is unchanged on first deploy). New endpoints:
+  `/api/hero-section` and `/api/about-section` (GET public; POST/PUT/DELETE
+  admin-only, mirroring every other content resource). `index.html` now
+  fetches and renders both sections from `/api/content` (`renderHero()` /
+  `renderAbout()`) instead of hardcoding their copy, and `admin/content.html`
+  gained "Home / Cover" and "About Us" entries in its `SECTIONS` config —
+  each behaves like the existing Company Info singleton: no "+ Add"/Delete,
+  just Edit, since there's always exactly one row.
+- Extended the hybrid image field (paste a URL *or* pick a file to upload —
+  previously only available on Projects) to the new Home/Cover background
+  image and About Us image fields. `HeroSection`/`AboutSection` each gained
+  an `imageData`/`imageContentType` byte pair (`@JsonIgnore`, same shape as
+  `ProjectItem.imageData`/`imageContentType`), backed by a new changeset
+  `004-hero-about-image-upload.yaml` (`addColumn` on both tables — `BYTEA` +
+  `VARCHAR(255)`). New endpoints `POST /api/hero-section/{id}/image` and
+  `POST /api/about-section/{id}/image` (multipart, admin-only, image files
+  only) store the uploaded bytes and rewrite the record's URL field to its
+  own serving path (`/api/hero-section/{id}/image` / `/api/about-section/
+  {id}/image`); `GET .../{id}/image` serves the bytes back out (public,
+  `Cache-Control: public, max-age=86400`), same pattern as
+  `ProjectController`'s image endpoints. Switching the URL field back to an
+  external link (or clearing it) drops the previously uploaded bytes, via
+  the same "does the incoming URL still equal our own serving path"
+  conditional clear that `ProjectItemServiceImpl.update()` already used.
+  `admin/content.html`'s `backgroundImageUrl` (Home/Cover) and `imageUrl`
+  (About Us) fields changed from plain `type:'text'` to `type:'image'` to
+  pick up the existing generic upload UI (`openModal`/`validateImageField`/
+  `handleImageUploadIfNeeded` — unchanged, since that logic is already
+  section-agnostic), and Home/Cover's table gained an image thumbnail
+  column to match every other section that has one. `SecurityConfig` gained
+  an explicit `POST /api/hero-section/*/image` / `POST /api/about-section/*/
+  image` authenticated rule, mirroring the existing `/api/projects/*/image`
+  one (the base resource's POST rule doesn't cover a nested sub-path).
+
+### Fixed
+- Every admin page's nav bar (Dashboard / View Leads / Log out, and the
+  hamburger toggle on mobile) rendered correctly but every link and button
+  in it was completely unclickable — a CSS stacking-context bug, not a JS
+  one. `content.html`'s `<header>` was `position: sticky` with `z-index:
+  100`, which creates its own stacking context; that trapped
+  `.header-actions`' `z-index: 1000` *inside* the header's context, so the
+  sibling `.nav-backdrop` overlay (`z-index: 999`, painted in the page's
+  root stacking context) ended up stacking above the entire header
+  (999 > 100 at the root level) — invisibly intercepting every click on the
+  nav, even though visually it just looked like the header's own slightly
+  darker background. Fixed by raising the header's `z-index` to `1001`, so
+  it's no longer beneath its own backdrop. Same bug, same fix, applied
+  consistently across every admin page sharing this header markup.
+- The "From"/"To" date filters on `/admin/leads` used the browser's native
+  date picker, whose popup calendar is positioned by the browser itself and
+  can't be controlled directly via CSS. On narrow (mobile) viewports the two
+  filter fields sat side by side (`min-width: 160px` each), pushing the
+  "From" input close to the right edge of the screen and causing its
+  calendar popup to render partially off-screen. Fixed by making
+  `.filter-field`/`.filter-field input` full width on mobile, so the two
+  fields stack in a single column instead of competing for horizontal
+  space; the original side-by-side layout is preserved above the existing
+  `@media (min-width: 769px)` breakpoint.
+
+### Changed
+- Redesigned `/admin/login` — previously a bare, unstyled username/password
+  form. Now matches the visual polish of the rest of the admin area.
+
 ## [0.3.0] - API + Postgres-backed content
 
 ### Added
