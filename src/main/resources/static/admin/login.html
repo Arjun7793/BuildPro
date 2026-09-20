@@ -45,6 +45,10 @@ margin-bottom:4px;
 color:#ffb400;
 }
 
+.logo #brand-name{
+color:#ffb400;
+}
+
 .subtitle{
 text-align:center;
 color:#888;
@@ -138,7 +142,7 @@ color:#555;
 <body>
 
 <div class="card">
-<div class="logo">BuildPro<span>.</span></div>
+<div class="logo"><span id="brand-name">BuildPro</span><span>.</span></div>
 <div class="subtitle">Admin sign in</div>
 
 <div class="message" id="message" hidden></div>
@@ -159,6 +163,29 @@ color:#555;
 </div>
 
 <script>
+// Same wiring as the public site: the admin pages also hardcoded "BuildPro"
+// in the title/logo/footer with no way to change it. Company name (set in
+// /admin/content -> Company info) now drives all of them here too, fetched
+// from the same public GET /api/company-info the public site uses - no admin
+// session needed, so this works on the login page as well. Falls back to the
+// "BuildPro" text already in the page if the request fails or nothing's been
+// configured yet.
+(function(){
+fetch('/api/company-info', {credentials:'same-origin'}).then(function(res){
+return res.ok ? res.json() : [];
+}).then(function(records){
+var name = (records && records[0] && records[0].companyName || '').trim();
+if(!name) return;
+document.title = document.title.replace(/^BuildPro\b/, name);
+var brandEl = document.getElementById('brand-name');
+if(brandEl) brandEl.textContent = name;
+var brandFooterEl = document.getElementById('brand-name-footer');
+if(brandFooterEl) brandFooterEl.textContent = name;
+}).catch(function(){
+// Keep the "BuildPro" fallback already in the page.
+});
+})();
+
 var form = document.getElementById('login-form');
 var messageEl = document.getElementById('message');
 var submitBtn = document.getElementById('submit-btn');

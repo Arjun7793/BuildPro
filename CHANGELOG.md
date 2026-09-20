@@ -4,6 +4,58 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+### Added
+- The public site's page title, header logo, and footer credit were hardcoded
+  to "BuildPro"/"BuildPro Construction" - there was no way to change the site's
+  actual name from the admin area, even though a "Company name" field already
+  existed in Company info (it only ever fed the Contact section's info card).
+  That same field now also drives the page `<title>`, header logo, and footer
+  text (`index.html`'s `renderCompanyInfo`), with a hint added in the admin
+  form explaining this, and a fallback to "BuildPro Construction" if company
+  info hasn't been filled in yet. No new field, no migration - purely wiring
+  up something that already existed.
+- The same wiring now covers all four admin pages too (dashboard, leads,
+  content, and the login page) - their title/logo/footer were independently
+  hardcoded to "BuildPro" as well. Each fetches the same public
+  `GET /api/company-info` (no admin session needed, so this works on the
+  login page before signing in) and fills in `#brand-name`/`#brand-name-footer`
+  spans, falling back to the page's existing "BuildPro" text if that request
+  fails or nothing's configured yet.
+- Fixed the brand name losing its styling on those same admin pages right
+  after adding the above: wrapping "BuildPro" in `<span id="brand-name">`
+  made it also match the page's generic `.logo span` rule (meant only for the
+  "Admin · X" suffix text next to it), so it rendered thin and white instead
+  of the bold gold logo look - and on the login page, the opposite problem
+  (it picked up that page's gold `.logo span` color instead of staying dark).
+  Added a `.logo #brand-name` override on all four pages so the brand name
+  keeps its original styling - dashboard/leads/content stay bold gold, and
+  the login page's brand name is now gold too (it was dark/black there
+  initially, matching that page's original unwrapped text color, but changed
+  to gold per feedback for consistency with the other three admin pages).
+
+### Added
+- Company info in the admin content page is now treated as the singleton it
+  always effectively was: the "+ Add company info record" button hides once
+  one exists, and its row only gets an Edit action (no Delete) - both to
+  avoid a second, ambiguous record and to stop the only one from being
+  deleted, since it now drives the site's name across the public site AND all
+  four admin pages, not just the old Contact section card. (UI-level only -
+  a direct `DELETE /api/company-info/{id}` call would still work; ask if
+  you'd like that locked down server-side too.)
+
+### Fixed
+- Editing Company name on the content page updated that section's table row
+  but left the page's own header logo, browser tab title, and footer showing
+  the old name until a manual reload - the branding fetch only ever ran once,
+  at page load, with no hook to re-run it after a save. Turned it into a
+  named `refreshBranding()` function, called again after every company-info
+  save. Along the way, fixed a second bug this exposed: rewriting
+  `document.title` in place only worked the first time (its "replace
+  BuildPro" regex stopped matching once the title already showed a real
+  company name) - it now rebuilds the title from a suffix captured once at
+  load, so it updates correctly no matter how many times a name is changed in
+  one sitting.
+
 ### Fixed
 - Projects could be saved with no title and no image at all (neither a URL nor
   an uploaded file), producing blank-looking cards on the public site.

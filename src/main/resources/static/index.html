@@ -251,7 +251,7 @@ display:none;
 
 <header>
 
-<div class="logo">BuildPro</div>
+<div class="logo" id="site-logo">BuildPro</div>
 
 <nav>
 
@@ -379,7 +379,7 @@ is completed with quality, safety and on-time delivery.
 
 <footer>
 
-&copy; 2026 BuildPro Construction. All Rights Reserved.
+&copy; 2026 <span id="footer-company-name">BuildPro Construction</span>. All Rights Reserved.
 
 </footer>
 
@@ -429,6 +429,19 @@ container.innerHTML = '<h3>' + escapeHtml(info.companyName) + '</h3><br><p>'
 + '\ud83d\udccd ' + escapeHtml(info.address) + '<br><br>'
 + '\ud83d\udcde ' + escapeHtml(info.phone) + '<br><br>'
 + '\u2709 ' + escapeHtml(info.email) + '</p>';
+
+// The site's actual "app name" - page title, header logo, footer credit - was
+// hardcoded to "BuildPro"/"BuildPro Construction" and had no admin config at
+// all, even though Company name (this same info.companyName) already existed
+// in the admin's Company info section. Now it drives all three, with a
+// fallback so the page never shows a blank title/logo if company info hasn't
+// been filled in yet.
+var name = (info.companyName || '').trim() || 'BuildPro Construction';
+document.title = name;
+var logoEl = document.getElementById('site-logo');
+if(logoEl) logoEl.textContent = name;
+var footerNameEl = document.getElementById('footer-company-name');
+if(footerNameEl) footerNameEl.textContent = name;
 }
 
 function animateCounters(){

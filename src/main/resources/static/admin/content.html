@@ -43,6 +43,13 @@ font-size:16px;
 margin-left:10px;
 }
 
+.logo #brand-name{
+color:#ffb400;
+font-weight:700;
+font-size:26px;
+margin-left:0;
+}
+
 .header-actions{
 display:flex;
 align-items:center;
@@ -487,7 +494,7 @@ margin-bottom:2px;
 <body>
 
 <header>
-<div class="logo">BuildPro<span>Admin &middot; Content</span></div>
+<div class="logo"><span id="brand-name">BuildPro</span><span>Admin &middot; Content</span></div>
 <div class="header-actions">
 <a class="nav-link" href="/admin">&larr; Dashboard</a>
 <a class="nav-link" href="/admin/leads">View leads &rarr;</a>
@@ -502,7 +509,7 @@ margin-bottom:2px;
 <div id="sections"></div>
 </main>
 
-<footer>&copy; <span id="year"></span> BuildPro Construction &mdash; Admin area</footer>
+<footer>&copy; <span id="year"></span> <span id="brand-name-footer">BuildPro Construction</span> &mdash; Admin area</footer>
 
 <div class="toast" id="toast" hidden></div>
 
@@ -527,6 +534,46 @@ margin-bottom:2px;
 
 <script>
 document.getElementById('year').textContent = new Date().getFullYear();
+
+// Same wiring as the public site: the admin pages also hardcoded "BuildPro"
+// in the title/logo/footer with no way to change it. Company name (set in
+// /admin/content -> Company info) now drives all of them here too, fetched
+// from the same public GET /api/company-info the public site uses - no admin
+// session needed, so this works on the login page as well. Falls back to the
+// "BuildPro" text already in the page if the request fails or nothing's been
+// configured yet.
+//
+// Named (not a fire-once IIFE) because this page is the one place an admin
+// can actually change company info without navigating away - the header/
+// title/footer here need to re-fetch right after that save, or they'd keep
+// showing the old name until a manual reload. Every other admin page only
+// ever needs this once, at load, since editing happens over here.
+// Captured once, from the page's real static title, before anything ever
+// rewrites it - "refreshBranding" runs more than once on this page (once at
+// load, again after every company-info save), and replacing "BuildPro" in
+// document.title in place only works the FIRST time: the second call would
+// find "Acme Corp Admin - Content" instead of "BuildPro Admin - Content" and
+// its regex would no longer match, silently freezing the title on whatever
+// name was set first.
+var titleSuffix = document.title.replace(/^BuildPro/, '');
+
+function refreshBranding(){
+fetch('/api/company-info', {credentials:'same-origin'}).then(function(res){
+return res.ok ? res.json() : [];
+}).then(function(records){
+var name = (records && records[0] && records[0].companyName || '').trim();
+if(!name) return;
+document.title = name + titleSuffix;
+var brandEl = document.getElementById('brand-name');
+if(brandEl) brandEl.textContent = name;
+var brandFooterEl = document.getElementById('brand-name-footer');
+if(brandFooterEl) brandFooterEl.textContent = name;
+}).catch(function(){
+// Keep whatever's already showing - stale is better than broken.
+});
+}
+refreshBranding();
+
 
 // One entry per content type. `path` is the REST base path, `columns` drive the
 // table (key into the item + a display label), `fields` drive the add/edit form
@@ -613,6 +660,13 @@ var SECTIONS = [
     title: 'Company info',
     path: '/api/company-info',
     singular: 'company info record',
+    // There's only ever meant to be one of these (the public site and now the
+    // admin pages themselves both read the first record as THE company info -
+    // see renderCompanyInfo/company-info branding wiring). A second record
+    // would be ambiguous (which one wins?) and deleting the only one would
+    // blank out the site's name everywhere. singleton hides "+ Add" once one
+    // exists and drops the Delete action, leaving only Edit.
+    singleton: true,
     columns: [
       {key:'companyName', label:'Company'},
       {key:'address', label:'Address', text:true},
@@ -620,7 +674,8 @@ var SECTIONS = [
       {key:'email', label:'Email'}
     ],
     fields: [
-      {name:'companyName', label:'Company name', type:'text', required:true},
+      {name:'companyName', label:'Company name', type:'text', required:true,
+        hint:'Also used as the public site\'s name - the page title, header logo, and footer credit.'},
       {name:'address', label:'Address', type:'text'},
       {name:'phone', label:'Phone', type:'text'},
       {name:'email', label:'Email', type:'text'}
@@ -687,7 +742,7 @@ return '' +
 '<div class="section" id="section-' + section.key + '">' +
 '<div class="section-header">' +
 '<div class="section-title">' + section.title + ' <span class="section-count" id="count-' + section.key + '"></span></div>' +
-'<button class="btn" data-add="' + section.key + '">+ Add ' + section.singular + '</button>' +
+'<button class="btn" id="add-btn-' + section.key + '" data-add="' + section.key + '">+ Add ' + section.singular + '</button>' +
 '</div>' +
 '<div class="card"><div id="body-' + section.key + '"><div class="loading-state">Loading&hellip;</div></div></div>' +
 '</div>';
@@ -737,6 +792,15 @@ var items = await res.json();
 section._items = items;
 countEl.textContent = items.length + (items.length === 1 ? ' item' : ' items');
 renderTable(section, bodyEl, items);
+
+// Singleton sections (company-info): once a record exists, there's nothing
+// meaningful to "+ Add" a second of - hide the button rather than let an
+// admin create a duplicate that only one of the two could ever actually
+// drive the site name.
+if(section.singleton){
+var addBtn = document.getElementById('add-btn-' + section.key);
+if(addBtn) addBtn.hidden = items.length > 0;
+}
 }catch(err){
 bodyEl.innerHTML = '<div class="error-state">Couldn\'t load ' + section.title.toLowerCase() + ': ' + escapeHtml(err.message) + '</div>';
 countEl.textContent = '';
@@ -769,10 +833,15 @@ var cells = section.columns.map(function(col){
 return '<td data-label="' + col.label + '">' + renderCell(col, item) + '</td>';
 }).join('');
 var dragAttrs = section.sortable ? ' class="draggable-row" draggable="true"' : '';
+// Singleton sections (company-info) get Edit only - no Delete, since
+// removing the only record would blank out the site's name everywhere that
+// now reads it (public site header/footer/title, all four admin pages).
+var deleteBtn = section.singleton ? '' :
+'<button class="icon-btn delete" data-delete="' + item.id + '" data-section="' + section.key + '">Delete</button>';
 return '<tr' + dragAttrs + ' data-id="' + item.id + '">' + handleCell + cells +
 '<td data-label="Action"><div class="row-actions">' +
 '<button class="icon-btn" data-edit="' + item.id + '" data-section="' + section.key + '">Edit</button>' +
-'<button class="icon-btn delete" data-delete="' + item.id + '" data-section="' + section.key + '">Delete</button>' +
+deleteBtn +
 '</div></td></tr>';
 }).join('');
 
@@ -1088,6 +1157,14 @@ closeModal();
 showToast(completedSection.singular.charAt(0).toUpperCase() + completedSection.singular.slice(1) +
 (wasEdit ? ' updated.' : ' created.'));
 loadSection(completedSection);
+
+// Company info drives this very page's own header/title/footer (and every
+// other admin page's, on their next load) - without this, editing it here
+// would only update the table row, leaving the stale old name showing right
+// above it until a manual refresh.
+if(completedSection.key === 'company-info'){
+refreshBranding();
+}
 }catch(err){
 modalError.textContent = err.message;
 }finally{

@@ -40,6 +40,13 @@ font-size:16px;
 margin-left:10px;
 }
 
+.logo #brand-name{
+color:#ffb400;
+font-weight:700;
+font-size:26px;
+margin-left:0;
+}
+
 main{
 padding:50px 8%;
 }
@@ -294,7 +301,7 @@ margin-bottom:2px;
 <body>
 
 <header>
-<div class="logo">BuildPro<span>Admin &middot; Leads</span></div>
+<div class="logo"><span id="brand-name">BuildPro</span><span>Admin &middot; Leads</span></div>
 <div class="header-actions">
 <a class="nav-link" href="/admin">&larr; Dashboard</a>
 <a class="nav-link" href="/admin/content">Manage site content &rarr;</a>
@@ -336,10 +343,34 @@ margin-bottom:2px;
 </div>
 </main>
 
-<footer>&copy; <span id="year"></span> BuildPro Construction &mdash; Admin area</footer>
+<footer>&copy; <span id="year"></span> <span id="brand-name-footer">BuildPro Construction</span> &mdash; Admin area</footer>
 
 <script>
 document.getElementById('year').textContent = new Date().getFullYear();
+
+// Same wiring as the public site: the admin pages also hardcoded "BuildPro"
+// in the title/logo/footer with no way to change it. Company name (set in
+// /admin/content -> Company info) now drives all of them here too, fetched
+// from the same public GET /api/company-info the public site uses - no admin
+// session needed, so this works on the login page as well. Falls back to the
+// "BuildPro" text already in the page if the request fails or nothing's been
+// configured yet.
+(function(){
+fetch('/api/company-info', {credentials:'same-origin'}).then(function(res){
+return res.ok ? res.json() : [];
+}).then(function(records){
+var name = (records && records[0] && records[0].companyName || '').trim();
+if(!name) return;
+document.title = document.title.replace(/^BuildPro\b/, name);
+var brandEl = document.getElementById('brand-name');
+if(brandEl) brandEl.textContent = name;
+var brandFooterEl = document.getElementById('brand-name-footer');
+if(brandFooterEl) brandFooterEl.textContent = name;
+}).catch(function(){
+// Keep the "BuildPro" fallback already in the page.
+});
+})();
+
 
 var content = document.getElementById('content');
 var countLabel = document.getElementById('count-label');
