@@ -108,7 +108,7 @@ minutes per IP address (configurable via `LEADS_RATE_LIMIT_MAX_REQUESTS` /
 Going over it gets a `429` with a `Retry-After` header instead of reaching the
 database — see `filter/LeadsRateLimitFilter.java`.
 
-Full curl examples with sample requests and responses are in the "buildpro API
+Full curl examples with sample requests and responses are in the "BuildPro API
 curl Reference" doc. Bad requests return a consistent JSON error shape via
 `GlobalExceptionHandler`:
 

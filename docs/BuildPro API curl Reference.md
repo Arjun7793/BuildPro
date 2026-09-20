@@ -1,4 +1,4 @@
-# sample\_starter API curl Reference
+# BuildPro API curl Reference
 
 2026-09-20 · @Someone
 
@@ -10,6 +10,19 @@ All requests below assume the app is running locally on the `local` profile:
 BASE=http://localhost:8080
 ```
 
+> The `POST`/`PUT`/`DELETE` calls below now require the admin login (see
+> README's "Admin area" section) - they're shown here without auth headers
+> for brevity, matching the rest of this doc, but against a real running
+> app they'll 401 unless you're carrying a signed-in session cookie plus
+> the matching `X-XSRF-TOKEN` header. Quick way to get both in a shell:
+>
+> ```bash
+> curl -s -c cookies.txt -b cookies.txt -X POST "$BASE/admin/login" \
+>   -d "username=admin&password=changeme" > /dev/null
+> CSRF=$(grep XSRF-TOKEN cookies.txt | awk '{print $7}')
+> # then add -b cookies.txt -H "X-XSRF-TOKEN: $CSRF" to any POST/PUT/DELETE below
+> ```
+
 ### Combined content (what the page itself fetches)
 
 ```bash
@@ -20,6 +33,8 @@ curl -s $BASE/api/content | jq
 
 ```json
 {
+  "heroSection": {"id": 1, "headline": "Building Your Dream Into Reality", "subheading": "25 years of construction excellence.", "ctaText": "Get Free Quote", "backgroundImageUrl": "https://images.unsplash.com/photo-example"},
+  "aboutSection": {"id": 1, "heading": "25 Years of Construction Excellence", "body": "We deliver quality construction...", "imageUrl": "https://images.unsplash.com/photo-example"},
   "services": [
     {"id": 1, "title": "Residential Construction", "description": "Luxury homes, villas and apartments.", "displayOrder": 1}
   ],
@@ -141,6 +156,14 @@ curl -s -X PUT $BASE/api/projects/1 \
 
 # Delete
 curl -s -X DELETE $BASE/api/projects/4 -w "%{http_code}\n"
+
+# Upload an image file (multipart, 5MB max, admin-only) - stored as bytes in
+# Postgres and rewrites this project's imageUrl to its own serving path below
+curl -s -X POST $BASE/api/projects/1/image \
+  -F "file=@/path/to/photo.jpg" | jq
+
+# Fetch the uploaded image back out (public, cached a day)
+curl -s $BASE/api/projects/1/image -o downloaded-photo.jpg
 ```
 
 **Response** to `GET /api/projects` (`200 OK`)
@@ -152,6 +175,86 @@ curl -s -X DELETE $BASE/api/projects/4 -w "%{http_code}\n"
   {"id": 3, "imageUrl": "https://images.unsplash.com/photo-1511818966892-d7d671e672a2?auto=format&fit=crop&w=800&q=80", "title": "Project 3", "displayOrder": 3}
 ]
 ```
+
+## Home / Cover section — `/api/hero-section`
+
+Singleton-ish (usually just one record, id `1`, seeded from what used to be
+hardcoded in `index.html`) - GET is public, everything else is admin-only.
+
+```bash
+# Get all (usually just one record)
+curl -s $BASE/api/hero-section | jq
+
+# Get one
+curl -s $BASE/api/hero-section/1 | jq
+
+# Update (this is the call the admin panel's Home/Cover edit form makes)
+curl -s -X PUT $BASE/api/hero-section/1 \
+  -H "Content-Type: application/json" \
+  -d '{"headline": "Building Your Dream Into Reality", "subheading": "25 years of construction excellence.", "ctaText": "Get Free Quote", "backgroundImageUrl": "https://images.unsplash.com/photo-example"}' | jq
+
+# Upload a background image file (multipart, 5MB max, admin-only) - stored as
+# bytes in Postgres and rewrites backgroundImageUrl to its own serving path
+curl -s -X POST $BASE/api/hero-section/1/image \
+  -F "file=@/path/to/banner.jpg" | jq
+
+# Fetch the uploaded background image back out (public, cached a day)
+curl -s $BASE/api/hero-section/1/image -o downloaded-banner.jpg
+
+# Delete
+curl -s -X DELETE $BASE/api/hero-section/1 -w "%{http_code}\n"
+```
+
+**Response** to `GET /api/hero-section` (`200 OK`)
+
+```json
+[
+  {"id": 1, "headline": "Building Your Dream Into Reality", "subheading": "25 years of construction excellence.", "ctaText": "Get Free Quote", "backgroundImageUrl": "https://images.unsplash.com/photo-example"}
+]
+```
+
+Switching `backgroundImageUrl` back to a pasted URL (or clearing it) on a
+`PUT` drops any previously uploaded image bytes for this record.
+
+## About Us section — `/api/about-section`
+
+Same singleton-ish shape as Home/Cover above - GET public, everything else
+admin-only.
+
+```bash
+# Get all (usually just one record)
+curl -s $BASE/api/about-section | jq
+
+# Get one
+curl -s $BASE/api/about-section/1 | jq
+
+# Update (this is the call the admin panel's About Us edit form makes)
+curl -s -X PUT $BASE/api/about-section/1 \
+  -H "Content-Type: application/json" \
+  -d '{"heading": "25 Years of Construction Excellence", "body": "We deliver quality construction with a focus on craftsmanship and client satisfaction.", "imageUrl": "https://images.unsplash.com/photo-example"}' | jq
+
+# Upload an image file (multipart, 5MB max, admin-only) - stored as bytes in
+# Postgres and rewrites imageUrl to its own serving path
+curl -s -X POST $BASE/api/about-section/1/image \
+  -F "file=@/path/to/about.jpg" | jq
+
+# Fetch the uploaded image back out (public, cached a day)
+curl -s $BASE/api/about-section/1/image -o downloaded-about.jpg
+
+# Delete
+curl -s -X DELETE $BASE/api/about-section/1 -w "%{http_code}\n"
+```
+
+**Response** to `GET /api/about-section` (`200 OK`)
+
+```json
+[
+  {"id": 1, "heading": "25 Years of Construction Excellence", "body": "We deliver quality construction with a focus on craftsmanship and client satisfaction.", "imageUrl": "https://images.unsplash.com/photo-example"}
+]
+```
+
+Switching `imageUrl` back to a pasted URL (or clearing it) on a `PUT` drops
+any previously uploaded image bytes for this record.
 
 ## Testimonials — `/api/testimonials`
 
@@ -220,6 +323,8 @@ curl -s -X DELETE $BASE/api/company-info/2 -w "%{http_code}\n"
 ## Leads (contact form) — `/api/leads`
 
 No `PUT` here — a submitted lead shouldn't be silently rewritten, only created, listed, or removed.
+`GET`/`GET /{id}`/`DELETE` are admin-only; `POST` (the contact form itself) stays public
+but is rate-limited to 5 submissions per 10 minutes per IP.
 
 ```bash
 # Create (this is what the contact form on the page actually calls)
@@ -227,8 +332,15 @@ curl -s -X POST $BASE/api/leads \
   -H "Content-Type: application/json" \
   -d '{"name": "Arjun", "email": "arjun@example.com", "phone": "+91 9000000000", "message": "Interested in a quote for a 3BHK villa."}' | jq
 
-# List all (newest first)
-curl -s $BASE/api/leads | jq
+# List, paginated (newest first) - all query params are optional
+curl -s "$BASE/api/leads?page=0&size=20" | jq
+
+# Search: name is a case-insensitive substring match; from/to are ISO dates
+# (inclusive), filtering on submission date
+curl -s "$BASE/api/leads?name=arjun&from=2026-09-01&to=2026-09-20" | jq
+
+# Dashboard counts (total / today / this week)
+curl -s $BASE/api/leads/stats | jq
 
 # Get one
 curl -s $BASE/api/leads/1 | jq
@@ -250,17 +362,29 @@ curl -s -X DELETE $BASE/api/leads/1 -w "%{http_code}\n"
 }
 ```
 
-**Response** to `GET /api/leads` (`200 OK`, newest first)
+**Response** to `GET /api/leads` (`200 OK`) — a Spring Data `Page`, not a bare array:
 
 ```json
-[
-  {
-    "id": 1,
-    "name": "Arjun",
-    "email": "arjun@example.com",
-    "phone": "+91 9000000000",
-    "message": "Interested in a quote for a 3BHK villa.",
-    "createdAt": "2026-09-20T08:15:00"
-  }
-]
+{
+  "content": [
+    {
+      "id": 1,
+      "name": "Arjun",
+      "email": "arjun@example.com",
+      "phone": "+91 9000000000",
+      "message": "Interested in a quote for a 3BHK villa.",
+      "createdAt": "2026-09-20T08:15:00"
+    }
+  ],
+  "totalElements": 1,
+  "totalPages": 1,
+  "number": 0,
+  "size": 20
+}
+```
+
+**Response** to `GET /api/leads/stats` (`200 OK`)
+
+```json
+{"total": 42, "today": 3, "thisWeek": 11}
 ```
