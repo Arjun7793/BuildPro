@@ -68,6 +68,20 @@ All notable changes to this project are documented here.
      4.0.x patch) in `build.gradle` and removing the `liquibase-core` version
      pin entirely - Boot's own dependency-management BOM now picks the
      matching `liquibase-core` version automatically.
+
+- The Boot 4.0.8 bump above turned out to be insufficient on its own: Railway still crashed with the byte-for-byte
+  identical `Circular depends-on relationship between 'liquibase' and
+  'entityManagerFactory'` error on 4.0.8 with Java 21.0.2, proving this is a
+  genuine Spring Boot 4.0.x autoconfiguration bug that persists across the
+  whole 4.0.4-4.0.8 patch range, not something a version bump alone fixes.
+  Actually fixed with a new class,
+  `config/LiquibaseJpaDependsOnFixConfig.java` - a `BeanFactoryPostProcessor`
+  that runs before the context refreshes and strips `entityManagerFactory`
+  out of the `liquibase` bean definition's `dependsOn` list (Boot wires that
+  edge in both directions for this app's bean combination; only the reverse
+  one - liquibase depending on JPA, which makes no sense - needs removing).
+  `entityManagerFactory`'s own `dependsOn` on `liquibase` is left untouched,
+  so migrations still run before JPA starts; the cycle just no longer exists.
 - The public site's page title, header logo, and footer credit were hardcoded
   to "BuildPro"/"BuildPro Construction" - there was no way to change the site's
   actual name from the admin area, even though a "Company name" field already

@@ -280,27 +280,30 @@ Then start the app - Liquibase runs automatically on startup, before Hibernate's
 and seeds them from `002-seed-data.yaml`, in that order, every time (local and
 Railway) - no separate manual reseed step.
 
-**Liquibase / Spring Boot version note:** the app crashed on every single
-startup attempt (both locally and on Railway) with `BeanCreationException:
-Circular depends-on relationship between 'liquibase' and
-'entityManagerFactory'` under Spring Boot **4.0.4**. Two attempts to fix this
-by pinning `org.liquibase:liquibase-core` in `build.gradle` (a plain
-`implementation` declaration, then a `resolutionStrategy.force`) either had no
-effect or - once the version was genuinely forced to 4.33.0 via
-`resolutionStrategy.force` - crashed with the byte-for-byte identical error,
-proving the Liquibase-core version was never the actual cause. The real cause
-is a Spring Boot 4.0.x autoconfiguration bug: `LiquibaseAutoConfiguration`
-imports `DatabaseInitializationDependencyConfigurer`, which wires the
-`dependsOn` relationships between database-initializer beans (Liquibase) and
-their dependents (`entityManagerFactory`) - in 4.0.4 that wiring ends up
-pointing both directions for this app's bean combination. The fix was to bump
-`org.springframework.boot` from **4.0.4 to 4.0.8** (the latest 4.0.x patch as
-of writing) in `build.gradle`, with no manual `liquibase-core` version pin -
-Boot's own dependency-management BOM picks the matching `liquibase-core`
-version automatically. If a future Boot upgrade reintroduces this error, treat
-it as this same autoconfiguration bug resurfacing rather than reaching for a
-`liquibase-core` version pin again - check for a newer 4.0.x/4.1.x patch
-first.
+**Liquibase / Spring Boot circular-dependency note:** the app crashed on
+every single startup attempt (both locally and on Railway) with
+`BeanCreationException: Circular depends-on relationship between 'liquibase'
+and 'entityManagerFactory'`. This turned out to be a genuine Spring Boot 4.0.x
+autoconfiguration bug, confirmed reproducible across **4.0.4, 4.0.4 with
+`liquibase-core` force-pinned to 4.33.0, and 4.0.8** (the latest 4.0.x patch
+as of writing) - ruling out both the Liquibase-core version and the Boot patch
+version as the cause before landing on the real one:
+`LiquibaseAutoConfiguration` imports `DatabaseInitializationDependencyConfigurer`,
+which is meant to make `entityManagerFactory` depend on `liquibase` (JPA
+should wait for migrations - correct). For this app's bean combination, Boot
+also wires the reverse edge - `liquibase` depending on `entityManagerFactory`,
+which has no reason to exist - and Spring's own circular-dependency check then
+rejects the resulting cycle outright.
+
+Fixed with a small `BeanFactoryPostProcessor` -
+`config/LiquibaseJpaDependsOnFixConfig.java` - that runs before the context
+refreshes and strips `entityManagerFactory` out of the `liquibase` bean
+definition's `dependsOn` list, leaving `entityManagerFactory`'s own `dependsOn`
+(on `liquibase`) untouched. Migrations still run before JPA starts; only the
+bad reverse edge is gone, so the cycle no longer exists. If a future Spring
+Boot upgrade fixes this properly upstream, this class becomes a harmless
+no-op - confirm that (comment it out, verify startup still works) before
+deleting it.
 
 ## Changelog
 
