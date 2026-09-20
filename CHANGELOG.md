@@ -4,6 +4,16 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+### Fixed
+- Railway build failure: "Cannot find a Java installation ... matching languageVersion=25.
+  Toolchain download repositories have not been configured." Railway's build container only ships
+  JDK 21, and Gradle had no way to fetch JDK 25 for the toolchain. Added the
+  `org.gradle.toolchains.foojay-resolver-convention` plugin (`settings.gradle`), which lets Gradle
+  auto-download the exact JDK a toolchain asks for on any machine that doesn't already have it —
+  Railway, other CI, or a new teammate's laptop — without changing the JDK 25 requirement itself.
+
+
+
 ### Changed
 - Renamed the project from `sample_starter` to `buildpro`, end to end:
   - `settings.gradle` (`rootProject.name`), `build.gradle` (`description`)
