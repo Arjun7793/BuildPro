@@ -305,11 +305,11 @@ display:block;
 }
 
 .text-cell{
-max-width:none;
+display:block;
+max-width:100%;
 color:#555;
-overflow:hidden;
-text-overflow:ellipsis;
 white-space:normal;
+word-break:break-word;
 }
 
 .row-actions{
@@ -663,8 +663,18 @@ display:none;
 }
 
 .text-cell{
+display:-webkit-box;
+-webkit-box-orient:vertical;
+-webkit-line-clamp:2;
 max-width:280px;
-white-space:nowrap;
+overflow:hidden;
+white-space:normal;
+word-break:break-word;
+vertical-align:top;
+}
+
+.table-scroll{
+overflow-x:auto;
 }
 
 }
@@ -1073,7 +1083,7 @@ deleteBtn +
 '</div></td></tr>';
 }).join('');
 
-bodyEl.innerHTML = '<table><thead><tr>' + headerCells + '</tr></thead><tbody>' + rows + '</tbody></table>';
+bodyEl.innerHTML = '<div class="table-scroll"><table><thead><tr>' + headerCells + '</tr></thead><tbody>' + rows + '</tbody></table></div>';
 
 if(section.sortable){
 wireDragAndDrop(section, bodyEl);
