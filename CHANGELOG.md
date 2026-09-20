@@ -4,6 +4,20 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+### Changed
+- Renamed the project from `sample_starter` to `buildpro`, end to end:
+  - `settings.gradle` (`rootProject.name`), `build.gradle` (`description`)
+  - Java package `com.example.sample_starter` → `com.example.buildpro` (every class moved and
+    re-packaged)
+  - Main class `SampleStarterApplication` → `BuildproApplication` (and its test class)
+  - `spring.application.name` in `application.yaml`, and the `com.example.buildpro` logger package in
+    all three profile files
+  - OpenAPI title (Swagger UI) → "BuildPro API"
+  - IntelliJ run config → `.idea/runConfigurations/BuildproApplication.xml`
+  - The local Postgres database itself was intentionally left named `sample_starter` — renaming a live
+    database is a separate, riskier step and wasn't part of this change.
+
+
 ### Added
 - Swagger / OpenAPI docs via `springdoc-openapi-starter-webmvc-ui:3.1.1`. Once the app is running:
   - Swagger UI: `http://localhost:8080/swagger-ui.html`

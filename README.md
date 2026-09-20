@@ -1,4 +1,4 @@
-# sample_starter — BuildPro Construction
+# buildpro — BuildPro Construction
 
 A Spring Boot backend for the BuildPro Construction page: services, stats, project
 showcase, testimonials, company info and a contact form, all stored in Postgres and
@@ -16,7 +16,7 @@ from that API at load time.
 ## Project layout
 
 ```
-src/main/java/com/example/sample_starter/
+src/main/java/com/example/buildpro/
   entity/       JPA entities (ServiceItem, Stat, ProjectItem, Testimonial, CompanyInfo, Lead)
   repository/   Spring Data JPA repositories
   service/      Service interfaces
@@ -113,8 +113,8 @@ curl Reference" doc. Bad requests return a consistent JSON error shape via
 ## Debugging
 
 An IntelliJ run/debug configuration is checked in at
-`.idea/runConfigurations/SampleStarterApplication.xml` — Run > Edit Configurations >
-`SampleStarterApplication`, then use the debug (bug) icon.
+`.idea/runConfigurations/BuildproApplication.xml` — Run > Edit Configurations >
+`BuildproApplication`, then use the debug (bug) icon.
 
 ## Logging
 

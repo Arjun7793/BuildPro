@@ -5,11 +5,11 @@ server:
 logging:
   level:
     root: INFO
-    com.example.sample_starter: DEBUG
+    com.example.buildpro: DEBUG
 
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/sample_starter
+    url: jdbc:postgresql://localhost:5432/buildpro
     username: postgres
     password: Hertzberger7793
     driver-class-name: org.postgresql.Driver

@@ -1,6 +1,6 @@
 spring:
   application:
-    name: sample_starter
+    name: buildpro
   profiles:
     active: local
   jpa:
@@ -15,7 +15,7 @@ server:
 logging:
   level:
     root: INFO
-    com.example.sample_starter: INFO
+    com.example.buildpro: INFO
   pattern:
     # %X{requestId} pulls the correlation id RequestLoggingFilter puts in MDC,
     # so every log line for one request can be grep'd together.

@@ -5,7 +5,7 @@ server:
 logging:
   level:
     root: WARN
-    com.example.sample_starter: INFO
+    com.example.buildpro: INFO
 
 spring:
   jpa:
@@ -15,10 +15,11 @@ spring:
   sql:
     init:
       mode: never
-  # datasource:
-  #   url: ${DB_URL}
-  #   username: ${DB_USERNAME}
-  #   password: ${DB_PASSWORD}
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
 
 springdoc:
   api-docs:
