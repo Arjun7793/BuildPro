@@ -18,46 +18,148 @@ font-family:'Poppins',sans-serif;
 scroll-behavior:smooth;
 }
 
+html,body{
+overflow-x:hidden;
+}
+
 body{
 background:#f7f7f7;
 color:#333;
 }
+
+/* ============================================================
+   MOBILE-FIRST: everything below with no media query is the
+   phone layout. The single @media(min-width:769px) block near
+   the bottom layers the wider-screen version on top of it. This
+   replaces the old desktop-first approach (full layout as the
+   base, then a max-width:768px block trying to patch it back
+   down for phones) - that shape is exactly what let the mobile
+   nav, the header, and the section spacing all ship broken at
+   once: it's easy to add a new desktop rule and forget the
+   phone-side patch, but there's no equivalent way to forget the
+   phone layout when it IS the default.
+   ============================================================ */
 
 header{
 position:fixed;
 top:0;
 width:100%;
 background:#222;
-padding:18px 8%;
+padding:12px 5%;
 display:flex;
 justify-content:space-between;
 align-items:center;
+gap:16px;
 z-index:1000;
 }
 
 .logo{
-font-size:28px;
+font-size:clamp(18px,4.5vw,28px);
 font-weight:700;
 color:#ffb400;
+white-space:nowrap;
+overflow:hidden;
+text-overflow:ellipsis;
+max-width:65vw;
+}
+
+/* Hamburger button - the default way into the nav on a phone; hidden again
+   at desktop widths below, where nav is just a plain inline row. */
+.nav-toggle{
+display:flex;
+flex-direction:column;
+justify-content:space-between;
+width:24px;
+height:18px;
+background:none;
+border:none;
+padding:0;
+cursor:pointer;
+z-index:1002;
+flex-shrink:0;
+}
+
+.nav-toggle span{
+display:block;
+height:3px;
+width:100%;
+background:#fff;
+border-radius:2px;
+transition:.3s;
+}
+
+.nav-toggle.active span:nth-child(1){
+transform:translateY(7.5px) rotate(45deg);
+}
+
+.nav-toggle.active span:nth-child(2){
+opacity:0;
+}
+
+.nav-toggle.active span:nth-child(3){
+transform:translateY(-7.5px) rotate(-45deg);
+}
+
+/* nav is an off-canvas slide-in panel by default; min-width:769px turns it
+   back into a normal inline row next to the logo. */
+nav{
+display:flex;
+flex-direction:column;
+align-items:flex-start;
+gap:6px;
+position:fixed;
+top:0;
+right:0;
+height:100vh;
+width:min(78%,300px);
+background:#222;
+padding:90px 30px 30px;
+box-shadow:-10px 0 30px rgba(0,0,0,.3);
+transform:translateX(100%);
+transition:transform .3s ease;
+z-index:1000;
+}
+
+nav.open{
+transform:translateX(0);
 }
 
 nav a{
 text-decoration:none;
 color:white;
-margin-left:30px;
 transition:.3s;
+width:100%;
+padding:14px 0;
+border-bottom:1px solid rgba(255,255,255,.12);
 }
 
 nav a:hover{
 color:#ffb400;
 }
 
+.nav-backdrop{
+display:none;
+position:fixed;
+inset:0;
+background:rgba(0,0,0,.5);
+z-index:999;
+}
+
+.nav-backdrop.open{
+display:block;
+}
+
+body.nav-open-lock{
+overflow:hidden;
+}
+
 .hero{
-height:100vh;
+min-height:100svh;
+min-height:100vh;
 background:url('https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&w=1600&q=80') center/cover;
 display:flex;
 align-items:center;
-padding:0 8%;
+padding:110px 6% 60px;
 position:relative;
 }
 
@@ -78,12 +180,12 @@ max-width:650px;
 }
 
 .hero h1{
-font-size:60px;
+font-size:clamp(32px,6vw,60px);
 margin-bottom:20px;
 }
 
 .hero p{
-font-size:20px;
+font-size:clamp(16px,2.2vw,20px);
 line-height:1.7;
 margin-bottom:35px;
 }
@@ -104,20 +206,21 @@ background:white;
 }
 
 section{
-padding:90px 8%;
+padding:60px 6%;
+scroll-margin-top:76px;
 }
 
 .title{
 text-align:center;
-font-size:40px;
+font-size:clamp(28px,5vw,40px);
 margin-bottom:50px;
 color:#222;
 }
 
 .about{
 display:grid;
-grid-template-columns:1fr 1fr;
-gap:50px;
+grid-template-columns:1fr;
+gap:30px;
 align-items:center;
 }
 
@@ -129,12 +232,12 @@ border-radius:10px;
 .services{
 display:grid;
 grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
-gap:25px;
+gap:20px;
 }
 
 .card{
 background:white;
-padding:30px;
+padding:22px;
 border-radius:10px;
 box-shadow:0 5px 20px rgba(0,0,0,.1);
 transition:.3s;
@@ -159,40 +262,40 @@ gap:20px;
 }
 
 .stat h2{
-font-size:55px;
+font-size:clamp(36px,7vw,55px);
 color:#ffb400;
 }
 
 .projects{
 display:grid;
-grid-template-columns:repeat(auto-fit,minmax(300px,1fr));
-gap:25px;
+grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+gap:20px;
 }
 
 .projects img{
 width:100%;
 border-radius:10px;
-height:250px;
+height:220px;
 object-fit:cover;
 }
 
 .testimonials{
 display:grid;
-grid-template-columns:repeat(auto-fit,minmax(300px,1fr));
-gap:25px;
+grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+gap:20px;
 }
 
 .testimonial{
 background:white;
-padding:30px;
+padding:22px;
 border-radius:10px;
 box-shadow:0 5px 20px rgba(0,0,0,.08);
 }
 
 .contact{
 display:grid;
-grid-template-columns:1fr 1fr;
-gap:50px;
+grid-template-columns:1fr;
+gap:30px;
 }
 
 input,textarea{
@@ -201,6 +304,8 @@ padding:15px;
 margin-bottom:20px;
 border:1px solid #ccc;
 border-radius:5px;
+font-family:'Poppins',sans-serif;
+font-size:16px;
 }
 
 button{
@@ -227,18 +332,63 @@ font-size:14px;
 min-height:18px;
 }
 
-@media(max-width:768px){
+/* ============================================================
+   min-width:769px - layer the wider-screen layout back on top:
+   the plain inline nav row, multi-column grids, roomier spacing.
+   ============================================================ */
+@media(min-width:769px){
 
-.about,.contact{
-grid-template-columns:1fr;
+header{
+padding:18px 8%;
 }
 
-.hero h1{
-font-size:40px;
+.nav-toggle{
+display:none;
 }
 
 nav{
-display:none;
+position:static;
+height:auto;
+width:auto;
+background:none;
+padding:0;
+box-shadow:none;
+transform:none;
+flex-direction:row;
+gap:0;
+}
+
+nav a{
+width:auto;
+margin-left:30px;
+padding:0;
+border-bottom:none;
+}
+
+.hero{
+padding:0 8%;
+}
+
+section{
+padding:90px 8%;
+scroll-margin-top:100px;
+}
+
+.about,.contact{
+grid-template-columns:1fr 1fr;
+gap:50px;
+}
+
+.services,.projects,.testimonials{
+gap:25px;
+}
+
+.card,.testimonial{
+padding:30px;
+}
+
+.projects img{
+height:250px;
 }
 
 }
@@ -251,9 +401,15 @@ display:none;
 
 <header>
 
-<div class="logo" id="site-logo">BuildPro</div>
+<div class="logo" id="site-logo" title="BuildPro Construction">BuildPro</div>
 
-<nav>
+<button type="button" class="nav-toggle" id="nav-toggle" aria-label="Toggle menu" aria-expanded="false" aria-controls="site-nav">
+<span></span>
+<span></span>
+<span></span>
+</button>
+
+<nav id="site-nav">
 
 <a href="#home">Home</a>
 <a href="#about">About</a>
@@ -264,6 +420,8 @@ display:none;
 </nav>
 
 </header>
+
+<div class="nav-backdrop" id="nav-backdrop"></div>
 
 <section class="hero" id="home">
 
@@ -477,8 +635,55 @@ console.error('Failed to load site content from /api/content', err);
 }
 }
 
+function setupMobileNav(){
+var toggle = document.getElementById('nav-toggle');
+var nav = document.getElementById('site-nav');
+var backdrop = document.getElementById('nav-backdrop');
+if(!toggle || !nav || !backdrop) return;
+
+function closeNav(){
+nav.classList.remove('open');
+backdrop.classList.remove('open');
+toggle.classList.remove('active');
+toggle.setAttribute('aria-expanded', 'false');
+document.body.classList.remove('nav-open-lock');
+}
+
+function openNav(){
+nav.classList.add('open');
+backdrop.classList.add('open');
+toggle.classList.add('active');
+toggle.setAttribute('aria-expanded', 'true');
+document.body.classList.add('nav-open-lock');
+}
+
+toggle.addEventListener('click', function(){
+if(nav.classList.contains('open')){
+closeNav();
+}else{
+openNav();
+}
+});
+
+backdrop.addEventListener('click', closeNav);
+
+nav.querySelectorAll('a').forEach(function(link){
+link.addEventListener('click', closeNav);
+});
+
+// Closing on resize back to desktop width avoids a stuck-open panel (with
+// the background-scroll lock still applied) if the menu was opened on a
+// phone and the window/orientation later changes past the breakpoint.
+window.addEventListener('resize', function(){
+if(window.innerWidth > 768){
+closeNav();
+}
+});
+}
+
 document.addEventListener('DOMContentLoaded', function(){
 loadContent();
+setupMobileNav();
 
 var form = document.getElementById('contact-form');
 var status = document.getElementById('form-status');

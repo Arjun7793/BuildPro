@@ -14,6 +14,10 @@ box-sizing:border-box;
 font-family:'Poppins',sans-serif;
 }
 
+html,body{
+overflow-x:hidden;
+}
+
 body{
 background:#f7f7f7;
 color:#333;
@@ -21,19 +25,25 @@ color:#333;
 
 header{
 background:#222;
-padding:18px 8%;
+padding:12px 5%;
 display:flex;
 justify-content:space-between;
 align-items:center;
 position:sticky;
 top:0;
-z-index:100;
+z-index:1001;
 }
 
 .logo{
 font-size:26px;
 font-weight:700;
 color:#ffb400;
+display:flex;
+align-items:center;
+flex-wrap:wrap;
+row-gap:2px;
+min-width:0;
+overflow:hidden;
 }
 
 .logo span{
@@ -50,11 +60,93 @@ font-size:26px;
 margin-left:0;
 }
 
+/* .header-actions is an off-canvas slide-in panel by default (mobile);
+   min-width:769px below turns it back into a plain inline row. */
 .header-actions{
 display:flex;
-align-items:center;
-gap:20px;
+flex-direction:column;
+align-items:flex-start;
+gap:6px;
+position:fixed;
+top:0;
+right:0;
+height:100vh;
+width:min(78%,300px);
+background:#222;
+padding:90px 30px 30px;
+box-shadow:-10px 0 30px rgba(0,0,0,.3);
+transform:translateX(100%);
+transition:transform .3s ease;
+z-index:1000;
 }
+
+.header-actions.open{
+transform:translateX(0);
+}
+
+.header-actions .nav-link,.header-actions .btn{
+width:100%;
+text-align:left;
+}
+
+.header-actions .nav-link{
+padding:14px 0;
+border-bottom:1px solid rgba(255,255,255,.12);
+}
+
+.nav-backdrop{
+display:none;
+position:fixed;
+inset:0;
+background:rgba(0,0,0,.5);
+z-index:999;
+}
+
+.nav-backdrop.open{
+display:block;
+}
+
+body.nav-open-lock{
+overflow:hidden;
+}
+
+/* Hamburger button - the default (mobile) way to open .header-actions;
+   hidden again at desktop widths below, where it's a plain inline row. */
+.nav-toggle{
+display:flex;
+flex-direction:column;
+justify-content:space-between;
+width:24px;
+height:18px;
+background:none;
+border:none;
+padding:0;
+cursor:pointer;
+z-index:1002;
+flex-shrink:0;
+}
+
+.nav-toggle span{
+display:block;
+height:3px;
+width:100%;
+background:#fff;
+border-radius:2px;
+transition:.3s;
+}
+
+.nav-toggle.active span:nth-child(1){
+transform:translateY(7.5px) rotate(45deg);
+}
+
+.nav-toggle.active span:nth-child(2){
+opacity:0;
+}
+
+.nav-toggle.active span:nth-child(3){
+transform:translateY(-7.5px) rotate(-45deg);
+}
+
 
 .nav-link{
 color:#ccc;
@@ -73,7 +165,7 @@ color:#ffb400;
 }
 
 main{
-padding:50px 8%;
+padding:30px 5%;
 }
 
 .title{
@@ -141,10 +233,8 @@ color:#333;
 }
 
 .card{
-background:white;
-border-radius:10px;
-box-shadow:0 5px 20px rgba(0,0,0,.1);
-overflow:hidden;
+background:none;
+box-shadow:none;
 }
 
 table{
@@ -164,10 +254,38 @@ letter-spacing:.5px;
 }
 
 tbody td{
-padding:14px 20px;
-border-bottom:1px solid #eee;
+padding:6px 0;
+border-bottom:none;
 vertical-align:top;
 font-size:15px;
+}
+
+/* Card-row layout is the default (mobile) table presentation - real
+   <table> layout with visible column headers only comes back at
+   min-width:769px, in the media query near the bottom of this block. */
+table,thead,tbody,th,td,tr{
+display:block;
+}
+
+thead{
+display:none;
+}
+
+tbody tr{
+background:white;
+border-radius:10px;
+box-shadow:0 5px 20px rgba(0,0,0,.08);
+margin-bottom:16px;
+padding:16px;
+}
+
+tbody td::before{
+content:attr(data-label);
+display:block;
+font-size:11px;
+text-transform:uppercase;
+color:#aaa;
+margin-bottom:2px;
 }
 
 tbody tr:last-child td{
@@ -187,11 +305,11 @@ display:block;
 }
 
 .text-cell{
-max-width:280px;
+max-width:none;
 color:#555;
 overflow:hidden;
 text-overflow:ellipsis;
-white-space:nowrap;
+white-space:normal;
 }
 
 .row-actions{
@@ -462,31 +580,93 @@ font-size:12px;
 margin-top:4px;
 }
 
-@media(max-width:768px){
-main{padding:30px 5%;}
-table,thead,tbody,th,td,tr{display:block;}
-thead{display:none;}
-tbody tr{
+/* ============================================================
+   min-width:769px - layer the wider-screen version back on top:
+   plain inline header nav, a real <table> instead of card rows,
+   roomier spacing.
+   ============================================================ */
+@media(min-width:769px){
+
+header{
+padding:18px 8%;
+}
+
+.nav-toggle{
+display:none;
+}
+
+.header-actions{
+position:static;
+height:auto;
+width:auto;
+background:none;
+flex-direction:row;
+align-items:center;
+gap:20px;
+padding:0;
+box-shadow:none;
+transform:none;
+}
+
+.header-actions .nav-link,.header-actions .btn{
+width:auto;
+text-align:left;
+}
+
+.header-actions .nav-link{
+padding:0;
+border-bottom:none;
+}
+
+main{
+padding:50px 8%;
+}
+
+.card{
 background:white;
 border-radius:10px;
-box-shadow:0 5px 20px rgba(0,0,0,.08);
-margin-bottom:16px;
-padding:16px;
+box-shadow:0 5px 20px rgba(0,0,0,.1);
+overflow:hidden;
 }
-tbody td{
+
+table,thead,tbody,th,td,tr{
+display:revert;
+}
+
+thead{
+display:table-header-group;
+}
+
+tbody tr{
+background:none;
+border-radius:0;
+box-shadow:none;
+margin-bottom:0;
+padding:0;
+}
+
+tbody tr:hover{
+background:#fafafa;
+}
+
+tbody tr:last-child td{
 border-bottom:none;
-padding:6px 0;
 }
+
+tbody td{
+padding:14px 20px;
+border-bottom:1px solid #eee;
+}
+
 tbody td::before{
-content:attr(data-label);
-display:block;
-font-size:11px;
-text-transform:uppercase;
-color:#aaa;
-margin-bottom:2px;
+display:none;
 }
-.text-cell{max-width:none;white-space:normal;}
-.card{background:none;box-shadow:none;}
+
+.text-cell{
+max-width:280px;
+white-space:nowrap;
+}
+
 }
 
 </style>
@@ -495,12 +675,19 @@ margin-bottom:2px;
 
 <header>
 <div class="logo"><span id="brand-name">BuildPro</span><span>Admin &middot; Content</span></div>
-<div class="header-actions">
+<button type="button" class="nav-toggle" id="nav-toggle" aria-label="Toggle menu" aria-expanded="false" aria-controls="header-actions">
+<span></span>
+<span></span>
+<span></span>
+</button>
+<div class="header-actions" id="header-actions">
 <a class="nav-link" href="/admin">&larr; Dashboard</a>
 <a class="nav-link" href="/admin/leads">View leads &rarr;</a>
 <button class="nav-link" id="logout-btn" type="button">Log out</button>
 </div>
 </header>
+
+<div class="nav-backdrop" id="nav-backdrop"></div>
 
 <main>
 <div class="title">Site content</div>
@@ -1203,6 +1390,51 @@ window.location.href = '/admin/login?logout';
 document.getElementById('logout-btn').addEventListener('click', logout);
 
 SECTIONS.forEach(loadSection);
+
+function setupMobileNav(){
+var toggle = document.getElementById('nav-toggle');
+var actions = document.getElementById('header-actions');
+var backdrop = document.getElementById('nav-backdrop');
+if(!toggle || !actions || !backdrop) return;
+
+function closeNav(){
+actions.classList.remove('open');
+backdrop.classList.remove('open');
+toggle.classList.remove('active');
+toggle.setAttribute('aria-expanded', 'false');
+document.body.classList.remove('nav-open-lock');
+}
+
+function openNav(){
+actions.classList.add('open');
+backdrop.classList.add('open');
+toggle.classList.add('active');
+toggle.setAttribute('aria-expanded', 'true');
+document.body.classList.add('nav-open-lock');
+}
+
+toggle.addEventListener('click', function(){
+if(actions.classList.contains('open')){
+closeNav();
+}else{
+openNav();
+}
+});
+
+backdrop.addEventListener('click', closeNav);
+
+actions.querySelectorAll('a,button').forEach(function(el){
+el.addEventListener('click', closeNav);
+});
+
+window.addEventListener('resize', function(){
+if(window.innerWidth > 768){
+closeNav();
+}
+});
+}
+
+setupMobileNav();
 </script>
 
 </body>

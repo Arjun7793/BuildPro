@@ -14,6 +14,10 @@ box-sizing:border-box;
 font-family:'Poppins',sans-serif;
 }
 
+html,body{
+overflow-x:hidden;
+}
+
 body{
 background:#f7f7f7;
 color:#333;
@@ -21,7 +25,7 @@ color:#333;
 
 header{
 background:#222;
-padding:18px 8%;
+padding:12px 5%;
 display:flex;
 justify-content:space-between;
 align-items:center;
@@ -31,6 +35,12 @@ align-items:center;
 font-size:26px;
 font-weight:700;
 color:#ffb400;
+display:flex;
+align-items:center;
+flex-wrap:wrap;
+row-gap:2px;
+min-width:0;
+overflow:hidden;
 }
 
 .logo span{
@@ -49,9 +59,89 @@ margin-left:0;
 
 .header-actions{
 display:flex;
-align-items:center;
-gap:20px;
+flex-direction:column;
+align-items:flex-start;
+gap:6px;
+position:fixed;
+top:0;
+right:0;
+height:100vh;
+width:min(78%,300px);
+background:#222;
+padding:90px 30px 30px;
+box-shadow:-10px 0 30px rgba(0,0,0,.3);
+transform:translateX(100%);
+transition:transform .3s ease;
+z-index:1000;
 }
+
+.header-actions.open{
+transform:translateX(0);
+}
+
+.header-actions .nav-link,.header-actions .btn{
+width:100%;
+text-align:left;
+}
+
+.header-actions .nav-link{
+padding:14px 0;
+border-bottom:1px solid rgba(255,255,255,.12);
+}
+
+.nav-backdrop{
+display:none;
+position:fixed;
+inset:0;
+background:rgba(0,0,0,.5);
+z-index:999;
+}
+
+.nav-backdrop.open{
+display:block;
+}
+
+body.nav-open-lock{
+overflow:hidden;
+}
+
+/* Hamburger button - visible by default (mobile-first); hidden at
+   min-width:769px where .header-actions becomes the normal inline row. */
+.nav-toggle{
+display:flex;
+flex-direction:column;
+justify-content:space-between;
+width:24px;
+height:18px;
+background:none;
+border:none;
+padding:0;
+cursor:pointer;
+z-index:1002;
+flex-shrink:0;
+}
+
+.nav-toggle span{
+display:block;
+height:3px;
+width:100%;
+background:#fff;
+border-radius:2px;
+transition:.3s;
+}
+
+.nav-toggle.active span:nth-child(1){
+transform:translateY(7.5px) rotate(45deg);
+}
+
+.nav-toggle.active span:nth-child(2){
+opacity:0;
+}
+
+.nav-toggle.active span:nth-child(3){
+transform:translateY(-7.5px) rotate(-45deg);
+}
+
 
 .nav-link{
 color:#ccc;
@@ -70,7 +160,7 @@ color:#ffb400;
 }
 
 main{
-padding:50px 8%;
+padding:30px 5%;
 }
 
 .title{
@@ -203,8 +293,36 @@ margin-top:60px;
 font-size:14px;
 }
 
-@media(max-width:768px){
-main{padding:30px 5%;}
+@media(min-width:769px){
+header{padding:18px 8%;}
+main{padding:50px 8%;}
+
+.nav-toggle{
+display:none;
+}
+
+.header-actions{
+position:static;
+height:auto;
+width:auto;
+background:none;
+flex-direction:row;
+align-items:center;
+gap:20px;
+padding:0;
+box-shadow:none;
+transform:none;
+}
+
+.header-actions .nav-link,.header-actions .btn{
+width:auto;
+text-align:left;
+}
+
+.header-actions .nav-link{
+padding:0;
+border-bottom:none;
+}
 }
 
 </style>
@@ -213,12 +331,19 @@ main{padding:30px 5%;}
 
 <header>
 <div class="logo"><span id="brand-name">BuildPro</span><span>Admin &middot; Dashboard</span></div>
-<div class="header-actions">
+<button type="button" class="nav-toggle" id="nav-toggle" aria-label="Toggle menu" aria-expanded="false" aria-controls="header-actions">
+<span></span>
+<span></span>
+<span></span>
+</button>
+<div class="header-actions" id="header-actions">
 <a class="nav-link" href="/admin/leads">Leads &rarr;</a>
 <a class="nav-link" href="/admin/content">Content &rarr;</a>
 <button class="nav-link" id="logout-btn" type="button">Log out</button>
 </div>
 </header>
+
+<div class="nav-backdrop" id="nav-backdrop"></div>
 
 <main>
 <div class="title">Dashboard</div>
@@ -343,6 +468,51 @@ window.location.href = '/admin/login?logout';
 
 document.getElementById('logout-btn').addEventListener('click', logout);
 loadStats();
+
+function setupMobileNav(){
+var toggle = document.getElementById('nav-toggle');
+var actions = document.getElementById('header-actions');
+var backdrop = document.getElementById('nav-backdrop');
+if(!toggle || !actions || !backdrop) return;
+
+function closeNav(){
+actions.classList.remove('open');
+backdrop.classList.remove('open');
+toggle.classList.remove('active');
+toggle.setAttribute('aria-expanded', 'false');
+document.body.classList.remove('nav-open-lock');
+}
+
+function openNav(){
+actions.classList.add('open');
+backdrop.classList.add('open');
+toggle.classList.add('active');
+toggle.setAttribute('aria-expanded', 'true');
+document.body.classList.add('nav-open-lock');
+}
+
+toggle.addEventListener('click', function(){
+if(actions.classList.contains('open')){
+closeNav();
+}else{
+openNav();
+}
+});
+
+backdrop.addEventListener('click', closeNav);
+
+actions.querySelectorAll('a,button').forEach(function(el){
+el.addEventListener('click', closeNav);
+});
+
+window.addEventListener('resize', function(){
+if(window.innerWidth > 768){
+closeNav();
+}
+});
+}
+
+setupMobileNav();
 </script>
 
 </body>
