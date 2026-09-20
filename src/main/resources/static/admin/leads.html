@@ -307,7 +307,7 @@ margin-bottom:2px;
 <div class="title">Contact form submissions</div>
 <div class="subtitle">Every lead captured through the public site's contact form, newest first.</div>
 
-<div class="filters">
+<form class="filters" id="filters-form">
 <div class="filter-field">
 <label for="filter-name">Name</label>
 <input type="text" id="filter-name" placeholder="Search by name&hellip;">
@@ -320,8 +320,9 @@ margin-bottom:2px;
 <label for="filter-to">To</label>
 <input type="date" id="filter-to">
 </div>
+<button class="btn" type="submit">Search</button>
 <button class="btn btn-secondary" id="clear-filters-btn" type="button">Clear filters</button>
-</div>
+</form>
 
 <div class="toolbar">
 <div class="count" id="count-label">Loading&hellip;</div>
@@ -345,6 +346,7 @@ var countLabel = document.getElementById('count-label');
 var refreshBtn = document.getElementById('refresh-btn');
 var logoutBtn = document.getElementById('logout-btn');
 var paginationEl = document.getElementById('pagination');
+var filtersForm = document.getElementById('filters-form');
 var nameFilterEl = document.getElementById('filter-name');
 var fromFilterEl = document.getElementById('filter-from');
 var toFilterEl = document.getElementById('filter-to');
@@ -352,7 +354,6 @@ var clearFiltersBtn = document.getElementById('clear-filters-btn');
 
 var currentPage = 0;
 var pageSize = 20;
-var nameFilterTimer = null;
 
 function escapeHtml(str){
 if(str === null || str === undefined) return '';
@@ -545,16 +546,16 @@ window.location.href = '/admin/login?logout';
 refreshBtn.addEventListener('click', function(){ loadLeads(currentPage); });
 logoutBtn.addEventListener('click', logout);
 
-// Debounced so typing a name doesn't fire a request per keystroke; date inputs
-// filter immediately since they change far less often. Any filter change resets
-// to page 0 - staying on, say, page 3 of a now-much-smaller filtered result
-// would just show an empty page.
-nameFilterEl.addEventListener('input', function(){
-clearTimeout(nameFilterTimer);
-nameFilterTimer = setTimeout(function(){ loadLeads(0); }, 350);
+// Filters only apply when the admin explicitly asks for them - the Search
+// button, or Enter in any of the fields (free with a <form>/submit button
+// instead of a plain button + click handler) - rather than firing a request on
+// every keystroke or every date change. Resets to page 0, since staying on,
+// say, page 3 of a now-much-smaller filtered result would just show an empty
+// page.
+filtersForm.addEventListener('submit', function(e){
+e.preventDefault();
+loadLeads(0);
 });
-fromFilterEl.addEventListener('change', function(){ loadLeads(0); });
-toFilterEl.addEventListener('change', function(){ loadLeads(0); });
 clearFiltersBtn.addEventListener('click', function(){
 nameFilterEl.value = '';
 fromFilterEl.value = '';

@@ -68,9 +68,11 @@ All notable changes to this project are documented here.
 - `GET /api/leads` gained `name`/`from`/`to` query params (case-insensitive
   substring match on name; inclusive date-range filter on submission date, all
   optional and combinable) via a new `LeadRepository`/`LeadSpecifications`
-  (`JpaSpecificationExecutor`). The admin leads page has a filter toolbar (name
-  search debounced, date inputs immediate, a "Clear filters" button) that resets
-  to page 0 on any change.
+  (`JpaSpecificationExecutor`). The admin leads page has a filter toolbar with
+  an explicit Search button (also triggered by Enter in any field, since the
+  filters are a `<form>`) and a "Clear filters" button, resetting to page 0 on
+  search. (Originally searched as-you-typed with a debounce; changed to an
+  explicit Search button per feedback.)
 - Drag-to-reorder for `displayOrder` on services, stats, projects, and
   testimonials in the admin content page - drag a row by its handle instead of
   typing a number. Dropped items are renumbered sequentially and only the rows
