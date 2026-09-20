@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping(value = "/api/company-info", produces = MediaType.APPLICATION_JSON_VALUE, consumes = MediaType.APPLICATION_JSON_VALUE)
+@RequestMapping(value = "/api/company-info", produces = MediaType.APPLICATION_JSON_VALUE)
 @RequiredArgsConstructor
 @Tag(name = "Company Info", description = "Company name, address, phone and email shown in Contact Us")
 public class CompanyInfoController {
@@ -35,14 +35,14 @@ public class CompanyInfoController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    @PostMapping
+    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Create a company info record")
     public ResponseEntity<CompanyInfo> create(@Valid @RequestBody CompanyInfo info) {
         CompanyInfo saved = companyInfoService.create(info);
         return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
 
-    @PutMapping("/{id}")
+    @PutMapping(value = "/{id}", consumes = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Update a company info record")
     public ResponseEntity<CompanyInfo> update(@PathVariable Long id, @Valid @RequestBody CompanyInfo update) {
         return companyInfoService.update(id, update)

@@ -39,6 +39,14 @@ All notable changes to this project are documented here.
   they were on by default in every profile, including prod, which springdoc warns about on startup.
   Still fully available under the `local` profile.
 
+### Fixed
+- The JSON-only enforcement above had a bug: `consumes = MediaType.APPLICATION_JSON_VALUE` was set on
+  the class-level `@RequestMapping`, so it applied to `GET`/`DELETE` requests too — which have no body
+  at all — and Spring rejected them with `415 Unsupported Media Type`. This broke every `GET` endpoint,
+  including `/api/content`, which is why the page loaded but every dynamic section stayed empty.
+  `consumes` now lives only on the `@PostMapping`/`@PutMapping` methods that actually take a request
+  body; `produces` stays at the class level since it's valid for every method.
+
 ### Changed
 - Refactored every controller from talking to repositories directly to a service layer:
   `service/<Entity>Service` (interface) + `service/impl/<Entity>ServiceImpl` (implementation), for

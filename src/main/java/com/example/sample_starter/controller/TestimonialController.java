@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping(value = "/api/testimonials", produces = MediaType.APPLICATION_JSON_VALUE, consumes = MediaType.APPLICATION_JSON_VALUE)
+@RequestMapping(value = "/api/testimonials", produces = MediaType.APPLICATION_JSON_VALUE)
 @RequiredArgsConstructor
 @Tag(name = "Testimonials", description = "Client testimonials")
 public class TestimonialController {
@@ -35,14 +35,14 @@ public class TestimonialController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    @PostMapping
+    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Create a testimonial")
     public ResponseEntity<Testimonial> create(@Valid @RequestBody Testimonial testimonial) {
         Testimonial saved = testimonialService.create(testimonial);
         return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
 
-    @PutMapping("/{id}")
+    @PutMapping(value = "/{id}", consumes = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Update a testimonial")
     public ResponseEntity<Testimonial> update(@PathVariable Long id, @Valid @RequestBody Testimonial update) {
         return testimonialService.update(id, update)

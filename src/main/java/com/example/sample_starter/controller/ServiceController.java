@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping(value = "/api/services", produces = MediaType.APPLICATION_JSON_VALUE, consumes = MediaType.APPLICATION_JSON_VALUE)
+@RequestMapping(value = "/api/services", produces = MediaType.APPLICATION_JSON_VALUE)
 @RequiredArgsConstructor
 @Tag(name = "Services", description = "The services shown in the Our Services section")
 public class ServiceController {
@@ -35,14 +35,14 @@ public class ServiceController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    @PostMapping
+    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Create a service")
     public ResponseEntity<ServiceItem> create(@Valid @RequestBody ServiceItem service) {
         ServiceItem saved = serviceItemService.create(service);
         return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
 
-    @PutMapping("/{id}")
+    @PutMapping(value = "/{id}", consumes = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Update a service")
     public ResponseEntity<ServiceItem> update(@PathVariable Long id, @Valid @RequestBody ServiceItem update) {
         return serviceItemService.update(id, update)

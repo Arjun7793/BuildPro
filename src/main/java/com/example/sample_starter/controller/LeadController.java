@@ -16,7 +16,7 @@ import java.util.List;
 // Contact form submissions. Only create/read/delete are exposed here -
 // a submitted lead generally shouldn't be silently rewritten, so there's no PUT.
 @RestController
-@RequestMapping(value = "/api/leads", produces = MediaType.APPLICATION_JSON_VALUE, consumes = MediaType.APPLICATION_JSON_VALUE)
+@RequestMapping(value = "/api/leads", produces = MediaType.APPLICATION_JSON_VALUE)
 @RequiredArgsConstructor
 @Tag(name = "Leads", description = "Contact form submissions")
 public class LeadController {
@@ -37,7 +37,7 @@ public class LeadController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    @PostMapping
+    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Submit the contact form")
     public ResponseEntity<Lead> create(@Valid @RequestBody Lead lead) {
         Lead saved = leadService.create(lead);
