@@ -7,7 +7,7 @@ from that API at load time.
 
 ## Tech stack
 
-- Java 25 (Gradle toolchain), Spring Boot 4.0.4
+- Java 21 (Gradle `sourceCompatibility`/`targetCompatibility` — no toolchain, compiles with whatever JDK is already running Gradle), Spring Boot 4.0.4
 - Spring Web MVC, Spring Data JPA, Bean Validation
 - PostgreSQL
 - springdoc-openapi (Swagger UI), Lombok
@@ -36,7 +36,7 @@ src/main/resources/
 
 ## Prerequisites
 
-- JDK 25 (set as the Gradle JVM / Project SDK in your IDE)
+- A JDK capable of running Gradle locally (JDK 21+; the build targets Java 21 bytecode regardless of which JDK compiles it)
 - PostgreSQL running locally (see below)
 
 ## Local database setup
@@ -47,11 +47,11 @@ brew services start postgresql@16
 
 /opt/homebrew/opt/postgresql@16/bin/createuser -s postgres
 /opt/homebrew/opt/postgresql@16/bin/psql -U postgres -d postgres -c "ALTER USER postgres WITH PASSWORD 'Hertzberger7793';"
-/opt/homebrew/opt/postgresql@16/bin/createdb -U postgres sample_starter
+/opt/homebrew/opt/postgresql@16/bin/createdb -U postgres buildpro
 ```
 
 `src/main/resources/application-local.yaml` already points at
-`jdbc:postgresql://localhost:5432/sample_starter` with those credentials. On first run,
+`jdbc:postgresql://localhost:5432/buildpro` with those credentials. On first run,
 Hibernate creates the schema (`ddl-auto: update`) and `data.sql` seeds it — both are
 idempotent, safe to restart repeatedly.
 
@@ -96,7 +96,7 @@ non-JSON `Accept` headers get `406`).
 | Leads (contact form) | `/api/leads` | GET, GET/{id}, POST, DELETE/{id} (no PUT) |
 | Combined content | `/api/content` | GET — everything above in one call, what the page itself fetches |
 
-Full curl examples with sample requests and responses are in the "sample_starter API
+Full curl examples with sample requests and responses are in the "buildpro API
 curl Reference" doc. Bad requests return a consistent JSON error shape via
 `GlobalExceptionHandler`:
 
@@ -123,6 +123,21 @@ the response) and logged with method/path/status/duration, via `RequestLoggingFi
 Static assets, Swagger UI, and the OpenAPI doc are excluded from this logging to avoid
 noise. The console log pattern includes the correlation id so all lines for one request
 can be found together.
+
+## Deployment
+
+The app is deployed on [Railway](https://railway.app), running the `prod` profile
+against a Railway-managed Postgres service. Live URL:
+
+<https://buildpro-production-bd6d.up.railway.app/>
+
+- Swagger/OpenAPI is disabled in `prod` (see `application-prod.yaml`) — it's only
+  available when running locally under the `local` profile.
+- `railway.json` (project root) pins an explicit `deploy.startCommand` — Railway's
+  auto-detected Gradle start command doesn't resolve the jar correctly for this
+  single-module layout, so we point it at `build/libs/*.jar` directly.
+- Full write-up of the deployment steps, the issues hit along the way, and how each
+  was fixed is in the "buildpro Deployment Guide" doc.
 
 ## Changelog
 

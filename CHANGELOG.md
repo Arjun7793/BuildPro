@@ -5,6 +5,23 @@ All notable changes to this project are documented here.
 ## [Unreleased]
 
 ### Fixed
+- Railway runtime crash: `data.sql` ran before Hibernate created the schema, failing with
+  `relation "services" does not exist` during the one-time production bootstrap (schema creation +
+  seed data). `application-local.yaml` already sets `defer-datasource-initialization: true`, which
+  orders schema creation before data scripts, but that setting wasn't present in the temporary prod
+  bootstrap environment variables. Fixed by adding `SPRING_JPA_DEFER_DATASOURCE_INITIALIZATION=true`
+  alongside `SPRING_JPA_HIBERNATE_DDL_AUTO=update` and `SPRING_SQL_INIT_MODE=always` for the bootstrap
+  deploy; all three are now reverted to `validate`/`never`/`true` respectively for normal operation, so
+  future deploys never re-run schema changes or reseed data.
+- Railway runtime crash: datasource initialization failed with
+  `Driver org.postgresql.Driver claims to not accept jdbcUrl, jdbc:postgresql://:/` — `DB_URL`
+  referenced `${{Postgres.PGHOST}}`/`${{Postgres.PGPORT}}`/`${{Postgres.PGDATABASE}}`, but no Postgres
+  service existed yet in the Railway project, so the reference variables silently resolved to empty
+  strings instead of erroring. Fixed by provisioning a PostgreSQL service in the Railway project
+  (named `Postgres`, matching the existing `${{Postgres.*}}` references) and redeploying.
+
+
+### Fixed
 - Railway deploy crash loop: the app built successfully but the container immediately exited with
   `ls: cannot access '*/build/libs/*jar': No such file or directory`, then printed the `java` usage/help
   text and exited — repeatedly, causing Railway's edge to return `502 Application failed to respond`
