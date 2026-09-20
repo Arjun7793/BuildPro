@@ -37,19 +37,22 @@ All notable changes to this project are documented here.
   two valid ways `ProjectItem` supports an image.
 
 ### Fixed
-- App failed to start after adding Liquibase
+- App failed to start, both locally and on Railway, after adding Liquibase
   (`BeanCreationException: ... Circular depends-on relationship between
-  'liquibase' and 'entityManagerFactory'`). Cause: `application-local.yaml`
-  had `spring.jpa.defer-datasource-initialization: true` left over from
-  before Liquibase existed (it makes the `data.sql` loader depend on
-  `entityManagerFactory`, so `data.sql` could build on schema Hibernate
-  itself created); combined with the new `sql.init.mode: always`, that added
-  a `data.sql` loader -> `entityManagerFactory` dependency on top of
-  Liquibase's own `entityManagerFactory` -> `liquibase` dependency, which
-  Spring resolved into a cycle. Removed `defer-datasource-initialization` -
-  Liquibase already guarantees it runs before both `entityManagerFactory`
-  and `data.sql` on its own, so nothing was actually relying on that flag
-  anymore.
+  'liquibase' and 'entityManagerFactory'`). First suspected (and fixed as a
+  worthwhile cleanup regardless) `application-local.yaml`'s leftover
+  `spring.jpa.defer-datasource-initialization: true`, but Railway crashed
+  with the exact same error despite `application-prod.yaml` never having had
+  that setting - so that wasn't the real cause. The actual cause: Spring Boot
+  4.0.4's `spring-boot-liquibase` module manages `org.liquibase:liquibase-core`
+  at version **5.0.2** by default, and Liquibase 5.x currently has a real,
+  unresolved incompatibility with Spring Boot 4's JPA autoconfiguration
+  wiring (other people combining Liquibase 5 with Spring Boot 4 hit the same
+  class of failure). Fixed by pinning an explicit
+  `implementation 'org.liquibase:liquibase-core:4.33.0'` in `build.gradle`
+  (the last stable Liquibase 4.x release) alongside
+  `spring-boot-starter-liquibase` - an explicitly declared version overrides
+  the one Spring's dependency-management plugin would otherwise manage.
 - The public site's page title, header logo, and footer credit were hardcoded
   to "BuildPro"/"BuildPro Construction" - there was no way to change the site's
   actual name from the admin area, even though a "Company name" field already

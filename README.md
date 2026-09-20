@@ -278,13 +278,18 @@ GRANT ALL ON SCHEMA public TO public;
 Then start the app - Liquibase runs automatically on startup, before Hibernate's
 `ddl-auto: validate` check, creates all 6 tables from `001-baseline-schema.yaml`,
 and seeds them from `002-seed-data.yaml`, in that order, every time (local and
-Railway) - no separate manual reseed step. Liquibase itself guarantees it runs
-before `entityManagerFactory`, so nothing extra is needed to order those two -
-notably **not** `spring.jpa.defer-datasource-initialization`, which existed only
-for the old Hibernate-creates-the-schema setup and (combined with
-`data.sql`/`sql.init.mode: always`, back when those still existed) caused a
-startup failure - "Circular depends-on relationship between 'liquibase' and
-'entityManagerFactory'" - so it's been removed from `application-local.yaml`.
+Railway) - no separate manual reseed step.
+
+**Liquibase version note:** `build.gradle` pins
+`implementation 'org.liquibase:liquibase-core:4.33.0'` explicitly, alongside
+`spring-boot-starter-liquibase`. Spring Boot 4.0.4's `spring-boot-liquibase`
+module manages `liquibase-core` at **5.0.2** by default, and that version
+currently has a real, unresolved incompatibility with Spring Boot 4's JPA
+autoconfiguration - it crashes app startup with `BeanCreationException:
+Circular depends-on relationship between 'liquibase' and
+'entityManagerFactory'`, on every startup, both locally and on Railway. Don't
+remove this pin (or bump it to a 5.x version) without confirming that
+incompatibility has actually been fixed upstream first.
 
 ## Changelog
 
