@@ -4,6 +4,18 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+### Fixed
+- Railway build failure: `:bootJar FAILED` — "Main class name has not been configured and it could
+  not be resolved from classpath". Root cause: `BuildproApplication.main` was declared
+  `static void main(String[] args)` (missing `public`) after the earlier rename from
+  `SampleStarterApplication`. Spring Boot's Gradle plugin locates the main class by scanning compiled
+  classes for a `public static void main(String[])` method — a package-private one is invisible to
+  that scan, so `bootJar` couldn't resolve `mainClass` even though `compileJava`/`resolveMainClassName`
+  had already succeeded. This wasn't just a Railway quirk: the JVM itself requires `public static void
+  main` to launch a class, so the built jar would have failed the same way with `java -jar` locally.
+  Fixed by adding the missing `public` modifier in `BuildproApplication.java`.
+
+
 ### Changed
 - Replaced the Gradle Java toolchain (which required auto-downloading a specific JDK on any machine
   that didn't already have it) with plain `sourceCompatibility`/`targetCompatibility = 21` in
