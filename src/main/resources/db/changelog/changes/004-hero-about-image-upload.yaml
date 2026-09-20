@@ -1,0 +1,35 @@
+databaseChangeLog:
+  # Adds upload-backed image storage to hero_section and about_section, same
+  # shape as projects.image_data/image_content_type (see 001-baseline-schema's
+  # projects table) - lets the admin pick a file instead of only pasting a URL,
+  # matching the Projects section's existing hybrid image field.
+
+  - changeSet:
+      id: 004-hero_section-image-upload
+      author: arjun
+      comment: Add background_image_data/background_image_content_type to hero_section for uploaded (not just linked) background images
+      changes:
+        - addColumn:
+            tableName: hero_section
+            columns:
+              - column:
+                  name: background_image_data
+                  type: BYTEA
+              - column:
+                  name: background_image_content_type
+                  type: VARCHAR(255)
+
+  - changeSet:
+      id: 004-about_section-image-upload
+      author: arjun
+      comment: Add image_data/image_content_type to about_section for uploaded (not just linked) images
+      changes:
+        - addColumn:
+            tableName: about_section
+            columns:
+              - column:
+                  name: image_data
+                  type: BYTEA
+              - column:
+                  name: image_content_type
+                  type: VARCHAR(255)

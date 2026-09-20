@@ -9,8 +9,8 @@ import org.springframework.context.annotation.Configuration;
         info = @Info(
                 title = "BuildPro API",
                 version = "0.0.1-SNAPSHOT",
-                description = "APIs backing the BuildPro Construction page: services, stats, projects, "
-                        + "testimonials, company info and contact-form leads, all stored in Postgres."
+                description = "APIs backing the BuildPro Construction page: hero/about section content, services, "
+                        + "stats, projects, testimonials, company info and contact-form leads, all stored in Postgres."
         )
 )
 public class OpenApiConfig {

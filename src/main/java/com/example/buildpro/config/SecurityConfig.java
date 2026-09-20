@@ -87,18 +87,23 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.DELETE, "/api/leads/**").authenticated()
                         .requestMatchers(HttpMethod.POST,
                                 "/api/services", "/api/stats", "/api/projects",
-                                "/api/testimonials", "/api/company-info").authenticated()
+                                "/api/testimonials", "/api/company-info",
+                                "/api/hero-section", "/api/about-section").authenticated()
                         // Project image upload lives under /api/projects/{id}/image -
                         // not covered by the bare "/api/projects" match above, so it
                         // needs its own rule or it would fall through to the public
                         // catch-all at the bottom.
                         .requestMatchers(HttpMethod.POST, "/api/projects/*/image").authenticated()
+                        .requestMatchers(HttpMethod.POST,
+                                "/api/hero-section/*/image", "/api/about-section/*/image").authenticated()
                         .requestMatchers(HttpMethod.PUT,
                                 "/api/services/**", "/api/stats/**", "/api/projects/**",
-                                "/api/testimonials/**", "/api/company-info/**").authenticated()
+                                "/api/testimonials/**", "/api/company-info/**",
+                                "/api/hero-section/**", "/api/about-section/**").authenticated()
                         .requestMatchers(HttpMethod.DELETE,
                                 "/api/services/**", "/api/stats/**", "/api/projects/**",
-                                "/api/testimonials/**", "/api/company-info/**").authenticated()
+                                "/api/testimonials/**", "/api/company-info/**",
+                                "/api/hero-section/**", "/api/about-section/**").authenticated()
                         // Everything else - every GET (the live site's own content
                         // fetch, /api/content included) and anything not matched above -
                         // stays public.

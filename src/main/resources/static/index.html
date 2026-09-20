@@ -427,14 +427,14 @@ height:250px;
 
 <div class="hero-content">
 
-<h1>Building Your Dream Into Reality</h1>
+<h1 id="hero-headline">Building Your Dream Into Reality</h1>
 
-<p>
+<p id="hero-subheading">
 Professional Construction Company delivering Residential,
 Commercial and Industrial projects with excellence.
 </p>
 
-<a href="#contact" class="btn">Get Free Quote</a>
+<a href="#contact" class="btn" id="hero-cta">Get Free Quote</a>
 
 </div>
 
@@ -446,15 +446,15 @@ Commercial and Industrial projects with excellence.
 
 <div class="about">
 
-<img src="https://images.unsplash.com/photo-1503387762-592deb58ef4e?auto=format&fit=crop&w=800&q=80">
+<img id="about-image" src="https://images.unsplash.com/photo-1503387762-592deb58ef4e?auto=format&fit=crop&w=800&q=80">
 
 <div>
 
-<h2>25 Years of Construction Excellence</h2>
+<h2 id="about-heading">25 Years of Construction Excellence</h2>
 
 <br>
 
-<p>
+<p id="about-body">
 
 We provide high-quality construction solutions for homes,
 commercial buildings, villas, apartments, hospitals,
@@ -580,6 +580,36 @@ return '<div class="testimonial">' + stars + '<p>' + escapeHtml(t.message) + '</
 }).join('');
 }
 
+// Graceful degradation like renderCompanyInfo below: if hero/about hasn't
+// been configured yet (heroSection/aboutSection is null - e.g. a fresh
+// database that hasn't run past the seed migration, or the record was
+// deleted), leave whatever's already hardcoded in the page alone instead of
+// blanking it out.
+function renderHero(hero){
+if(!hero) return;
+var headlineEl = document.getElementById('hero-headline');
+if(headlineEl && hero.headline) headlineEl.textContent = hero.headline;
+var subheadingEl = document.getElementById('hero-subheading');
+if(subheadingEl && hero.subheading) subheadingEl.textContent = hero.subheading;
+var ctaEl = document.getElementById('hero-cta');
+if(ctaEl && hero.ctaText) ctaEl.textContent = hero.ctaText;
+if(hero.backgroundImageUrl){
+var heroSectionEl = document.querySelector('.hero');
+if(heroSectionEl) heroSectionEl.style.backgroundImage =
+"url('" + hero.backgroundImageUrl.replace(/'/g, "\\'") + "')";
+}
+}
+
+function renderAbout(about){
+if(!about) return;
+var headingEl = document.getElementById('about-heading');
+if(headingEl && about.heading) headingEl.textContent = about.heading;
+var bodyEl = document.getElementById('about-body');
+if(bodyEl && about.body) bodyEl.textContent = about.body;
+var imageEl = document.getElementById('about-image');
+if(imageEl && about.imageUrl) imageEl.src = about.imageUrl;
+}
+
 function renderCompanyInfo(info){
 if(!info) return;
 var container = document.getElementById('company-info');
@@ -625,6 +655,8 @@ try{
 var res = await fetch('/api/content');
 if(!res.ok) throw new Error('request failed: ' + res.status);
 var data = await res.json();
+renderHero(data.heroSection);
+renderAbout(data.aboutSection);
 renderServices(data.services);
 renderStats(data.stats);
 renderProjects(data.projects);

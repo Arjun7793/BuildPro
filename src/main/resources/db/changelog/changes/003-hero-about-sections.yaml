@@ -1,0 +1,103 @@
+databaseChangeLog:
+  # Adds the two content blocks that were previously hardcoded straight into
+  # index.html with no admin config at all: the top hero banner (id="home")
+  # and the About Us section (id="about"). Same singleton shape as
+  # company_info - one row, edited via PUT, never really "deleted" from the
+  # admin UI (see the `singleton` flag on the matching SECTIONS entries in
+  # admin/content.html).
+
+  - changeSet:
+      id: 003-hero_section
+      author: arjun
+      comment: hero_section table - the public site's top banner content
+      changes:
+        - createTable:
+            tableName: hero_section
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: headline
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: subheading
+                  type: VARCHAR(1000)
+              - column:
+                  name: cta_text
+                  type: VARCHAR(255)
+              - column:
+                  name: background_image_url
+                  type: VARCHAR(1000)
+
+  - changeSet:
+      id: 003-about_section
+      author: arjun
+      comment: about_section table - the public site's About Us content
+      changes:
+        - createTable:
+            tableName: about_section
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: heading
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: body
+                  type: VARCHAR(1000)
+              - column:
+                  name: image_url
+                  type: VARCHAR(1000)
+
+  - changeSet:
+      id: 003-seed-hero_section
+      author: arjun
+      comment: Seed data - the hero banner text/image that was previously hardcoded in index.html, so existing sites don't go blank
+      changes:
+        - insert:
+            tableName: hero_section
+            columns:
+              - column: {name: id, valueNumeric: 1}
+              - column: {name: headline, value: 'Building Your Dream Into Reality'}
+              - column: {name: subheading, value: 'Professional Construction Company delivering Residential, Commercial and Industrial projects with excellence.'}
+              - column: {name: cta_text, value: 'Get Free Quote'}
+              - column: {name: background_image_url, value: 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&w=1600&q=80'}
+
+  - changeSet:
+      id: 003-seed-about_section
+      author: arjun
+      comment: Seed data - the About Us text/image that was previously hardcoded in index.html, so existing sites don't go blank
+      changes:
+        - insert:
+            tableName: about_section
+            columns:
+              - column: {name: id, valueNumeric: 1}
+              - column: {name: heading, value: '25 Years of Construction Excellence'}
+              - column: {name: body, value: 'We provide high-quality construction solutions for homes, commercial buildings, villas, apartments, hospitals, schools and industries. Our experienced engineers and architects ensure every project is completed with quality, safety and on-time delivery.'}
+              - column: {name: image_url, value: 'https://images.unsplash.com/photo-1503387762-592deb58ef4e?auto=format&fit=crop&w=800&q=80'}
+
+  - changeSet:
+      id: 003-seed-bump-sequences
+      author: arjun
+      comment: Keep hero_section/about_section's id sequences ahead of the explicit ids inserted above, same as 002-seed-bump-sequences does for the other tables
+      changes:
+        - sql:
+            sql: >
+              SELECT setval(pg_get_serial_sequence('hero_section', 'id'), COALESCE((SELECT MAX(id) FROM hero_section), 1));
+        - sql:
+            sql: >
+              SELECT setval(pg_get_serial_sequence('about_section', 'id'), COALESCE((SELECT MAX(id) FROM about_section), 1));

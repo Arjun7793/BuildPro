@@ -1,7 +1,9 @@
 package com.example.buildpro.service.impl;
 
 import com.example.buildpro.dto.SiteContentResponse;
+import com.example.buildpro.service.AboutSectionService;
 import com.example.buildpro.service.CompanyInfoService;
+import com.example.buildpro.service.HeroSectionService;
 import com.example.buildpro.service.ProjectItemService;
 import com.example.buildpro.service.ServiceItemService;
 import com.example.buildpro.service.SiteContentService;
@@ -14,6 +16,8 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class SiteContentServiceImpl implements SiteContentService {
 
+    private final HeroSectionService heroSectionService;
+    private final AboutSectionService aboutSectionService;
     private final ServiceItemService serviceItemService;
     private final StatService statService;
     private final ProjectItemService projectItemService;
@@ -23,6 +27,8 @@ public class SiteContentServiceImpl implements SiteContentService {
     @Override
     public SiteContentResponse getContent() {
         return new SiteContentResponse(
+                heroSectionService.findAll().stream().findFirst().orElse(null),
+                aboutSectionService.findAll().stream().findFirst().orElse(null),
                 serviceItemService.findAll(),
                 statService.findAll(),
                 projectItemService.findAll(),
