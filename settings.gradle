@@ -1,1 +1,9 @@
+plugins {
+	// Lets Gradle auto-download a matching JDK when the toolchain pinned in
+	// build.gradle (languageVersion = 21) isn't already installed locally -
+	// without this, "Cannot find a Java installation... Toolchain download
+	// repositories have not been configured" is exactly what you hit above.
+	id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
+}
+
 rootProject.name = 'buildpro'

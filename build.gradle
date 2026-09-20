@@ -1,6 +1,6 @@
 plugins {
 	id 'java'
-	id 'org.springframework.boot' version '4.0.4'
+	id 'org.springframework.boot' version '4.0.8'
 	id 'io.spring.dependency-management' version '1.1.7'
 }
 
@@ -11,6 +11,9 @@ description = 'buildpro'
 java {
 	sourceCompatibility = JavaVersion.VERSION_21
 	targetCompatibility = JavaVersion.VERSION_21
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(21)
+	}
 }
 
 repositories {
@@ -31,27 +34,6 @@ dependencies {
 	testCompileOnly 'org.projectlombok:lombok'
 	testAnnotationProcessor 'org.projectlombok:lombok'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
-}
-
-// Spring Boot 4.0.4's spring-boot-liquibase module transitively pulls in
-// org.liquibase:liquibase-core 5.0.2, which crashes app startup:
-// "Circular depends-on relationship between 'liquibase' and
-// 'entityManagerFactory'" - a currently-unresolved Liquibase 5.x / Spring
-// Boot 4 autoconfiguration incompatibility (other people combining
-// Liquibase 5 with Spring Boot 4 hit the same class of bean-creation
-// failure). A plain `implementation 'org.liquibase:liquibase-core:4.33.0'`
-// declaration does NOT fix this - Gradle's default conflict resolution
-// picks the HIGHEST version among all candidates for a dependency, direct
-// or transitive, so the transitively-pulled 5.0.2 still wins over an
-// explicitly declared but lower 4.33.0. `resolutionStrategy.force` is what
-// actually overrides that and forces every configuration onto 4.33.0 (the
-// last stable Liquibase 4.x release), regardless of what any other
-// dependency asks for. Don't remove this (or bump it to a 5.x version)
-// without confirming the incompatibility has actually been fixed upstream.
-configurations.all {
-	resolutionStrategy {
-		force 'org.liquibase:liquibase-core:4.33.0'
-	}
 }
 
 tasks.named('test') {

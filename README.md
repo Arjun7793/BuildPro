@@ -280,22 +280,27 @@ Then start the app - Liquibase runs automatically on startup, before Hibernate's
 and seeds them from `002-seed-data.yaml`, in that order, every time (local and
 Railway) - no separate manual reseed step.
 
-**Liquibase version note:** `build.gradle` forces
-`org.liquibase:liquibase-core` to **4.33.0** via `resolutionStrategy.force`.
-Spring Boot 4.0.4's `spring-boot-liquibase` module transitively pulls in
-`liquibase-core` **5.0.2**, and that version currently has a real, unresolved
-incompatibility with Spring Boot 4's JPA autoconfiguration - it crashes app
-startup with `BeanCreationException: Circular depends-on relationship between
-'liquibase' and 'entityManagerFactory'`, on every single startup attempt,
-both locally and on Railway. A plain `implementation
-'org.liquibase:liquibase-core:4.33.0'` declaration does **not** fix this -
-Gradle's default conflict resolution picks the *highest* version among all
-candidates for a dependency (direct or transitive), so the transitively-pulled
-5.0.2 wins over an explicitly declared but lower 4.33.0 regardless; that was
-tried first and Railway crashed identically even with that line in place.
-`resolutionStrategy.force` is what actually overrides the resolved version for
-every configuration. Don't remove this (or bump it to a 5.x version) without
-confirming the incompatibility has actually been fixed upstream first.
+**Liquibase / Spring Boot version note:** the app crashed on every single
+startup attempt (both locally and on Railway) with `BeanCreationException:
+Circular depends-on relationship between 'liquibase' and
+'entityManagerFactory'` under Spring Boot **4.0.4**. Two attempts to fix this
+by pinning `org.liquibase:liquibase-core` in `build.gradle` (a plain
+`implementation` declaration, then a `resolutionStrategy.force`) either had no
+effect or - once the version was genuinely forced to 4.33.0 via
+`resolutionStrategy.force` - crashed with the byte-for-byte identical error,
+proving the Liquibase-core version was never the actual cause. The real cause
+is a Spring Boot 4.0.x autoconfiguration bug: `LiquibaseAutoConfiguration`
+imports `DatabaseInitializationDependencyConfigurer`, which wires the
+`dependsOn` relationships between database-initializer beans (Liquibase) and
+their dependents (`entityManagerFactory`) - in 4.0.4 that wiring ends up
+pointing both directions for this app's bean combination. The fix was to bump
+`org.springframework.boot` from **4.0.4 to 4.0.8** (the latest 4.0.x patch as
+of writing) in `build.gradle`, with no manual `liquibase-core` version pin -
+Boot's own dependency-management BOM picks the matching `liquibase-core`
+version automatically. If a future Boot upgrade reintroduces this error, treat
+it as this same autoconfiguration bug resurfacing rather than reaching for a
+`liquibase-core` version pin again - check for a newer 4.0.x/4.1.x patch
+first.
 
 ## Changelog
 

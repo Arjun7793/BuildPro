@@ -39,27 +39,35 @@ All notable changes to this project are documented here.
 ### Fixed
 - App failed to start, both locally and on Railway, after adding Liquibase
   (`BeanCreationException: ... Circular depends-on relationship between
-  'liquibase' and 'entityManagerFactory'`). First suspected (and fixed as a
-  worthwhile cleanup regardless) `application-local.yaml`'s leftover
-  `spring.jpa.defer-datasource-initialization: true`, but Railway crashed
-  with the exact same error despite `application-prod.yaml` never having had
-  that setting - so that wasn't the real cause. The actual cause: Spring Boot
-  4.0.4's `spring-boot-liquibase` module manages `org.liquibase:liquibase-core`
-  at version **5.0.2** by default, and Liquibase 5.x currently has a real,
-  unresolved incompatibility with Spring Boot 4's JPA autoconfiguration
-  wiring (other people combining Liquibase 5 with Spring Boot 4 hit the same
-  class of failure). First attempted fix - a plain
-  `implementation 'org.liquibase:liquibase-core:4.33.0'` in `build.gradle`
-  alongside `spring-boot-starter-liquibase` - also did **not** work: Railway
-  crashed with the byte-for-byte identical error even with that line in
-  place and deployed, because Gradle's default conflict resolution picks the
-  *highest* version among all candidates for a dependency (direct or
-  transitive), and the transitively-pulled 5.0.2 is higher than the
-  explicitly declared 4.33.0, so 5.0.2 kept winning regardless. Actually
-  fixed with a `configurations.all { resolutionStrategy { force
-  'org.liquibase:liquibase-core:4.33.0' } }` block, which genuinely forces
-  every configuration onto 4.33.0 (the last stable Liquibase 4.x release)
-  no matter what any other dependency asks for.
+  'liquibase' and 'entityManagerFactory'`). Investigation went through three
+  attempted fixes before finding the real cause:
+  1. Suspected (and fixed as a worthwhile cleanup regardless)
+     `application-local.yaml`'s leftover
+     `spring.jpa.defer-datasource-initialization: true`, but Railway crashed
+     with the exact same error despite `application-prod.yaml` never having
+     had that setting - so that wasn't the real cause.
+  2. Suspected the `org.liquibase:liquibase-core` version (Spring Boot 4.0.4's
+     `spring-boot-liquibase` module manages it at **5.0.2** by default) and
+     added a plain `implementation 'org.liquibase:liquibase-core:4.33.0'` in
+     `build.gradle` - had **no effect**: Railway crashed with the
+     byte-for-byte identical error, because Gradle's default conflict
+     resolution picks the *highest* version among all candidates for a
+     dependency (direct or transitive), so the transitively-pulled 5.0.2 kept
+     winning over the explicitly declared but lower 4.33.0.
+  3. Switched to `configurations.all { resolutionStrategy { force
+     'org.liquibase:liquibase-core:4.33.0' } } }`, which genuinely does force
+     every configuration onto 4.33.0 - and Railway **still** crashed with the
+     identical error. This proved the Liquibase-core version was never the
+     actual cause: it's a Spring Boot 4.0.x autoconfiguration bug.
+     `LiquibaseAutoConfiguration` imports
+     `DatabaseInitializationDependencyConfigurer`, the mechanism that wires
+     `dependsOn` between database-initializer beans (Liquibase) and their
+     dependents (`entityManagerFactory`); in 4.0.4 that wiring ends up
+     pointing both directions for this app's bean combination. Actually fixed
+     by bumping `org.springframework.boot` from **4.0.4 to 4.0.8** (latest
+     4.0.x patch) in `build.gradle` and removing the `liquibase-core` version
+     pin entirely - Boot's own dependency-management BOM now picks the
+     matching `liquibase-core` version automatically.
 - The public site's page title, header logo, and footer credit were hardcoded
   to "BuildPro"/"BuildPro Construction" - there was no way to change the site's
   actual name from the admin area, even though a "Company name" field already
