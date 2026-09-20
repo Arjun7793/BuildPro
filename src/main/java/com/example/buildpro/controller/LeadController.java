@@ -24,13 +24,13 @@ public class LeadController {
     private final LeadService leadService;
 
     @GetMapping
-    @Operation(summary = "List all leads, newest first")
+    @Operation(summary = "List all leads, newest first (admin only - requires HTTP Basic auth)")
     public List<Lead> getAll() {
         return leadService.findAll();
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "Get one lead by id")
+    @Operation(summary = "Get one lead by id (admin only - requires HTTP Basic auth)")
     public ResponseEntity<Lead> getOne(@PathVariable Long id) {
         return leadService.findById(id)
                 .map(ResponseEntity::ok)
@@ -45,7 +45,7 @@ public class LeadController {
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "Delete a lead")
+    @Operation(summary = "Delete a lead (admin only - requires HTTP Basic auth)")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         return leadService.delete(id)
                 ? ResponseEntity.noContent().build()

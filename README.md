@@ -93,8 +93,10 @@ non-JSON `Accept` headers get `406`).
 | Projects | `/api/projects` | GET, GET/{id}, POST, PUT/{id}, DELETE/{id} |
 | Testimonials | `/api/testimonials` | GET, GET/{id}, POST, PUT/{id}, DELETE/{id} |
 | Company info | `/api/company-info` | GET, GET/{id}, POST, PUT/{id}, DELETE/{id} |
-| Leads (contact form) | `/api/leads` | GET, GET/{id}, POST, DELETE/{id} (no PUT) |
+| Leads (contact form) | `/api/leads` | GET\*, GET/{id}\*, POST, DELETE/{id}\* (no PUT) |
 | Combined content | `/api/content` | GET — everything above in one call, what the page itself fetches |
+
+\* Requires the admin login (see Admin area below); `POST` stays public for the contact form itself.
 
 Full curl examples with sample requests and responses are in the "buildpro API
 curl Reference" doc. Bad requests return a consistent JSON error shape via
@@ -123,6 +125,25 @@ the response) and logged with method/path/status/duration, via `RequestLoggingFi
 Static assets, Swagger UI, and the OpenAPI doc are excluded from this logging to avoid
 noise. The console log pattern includes the correlation id so all lines for one request
 can be found together.
+
+## Admin area
+
+Contact form submissions (leads) are viewable separately from the public site, at
+`/admin/leads.html`, protected by a single admin account (HTTP Basic — the browser
+shows its native login prompt, no custom login form). Everything else (the public
+site, `/api/content`, and submitting the contact form itself) stays open, same as
+before.
+
+Credentials come from `admin.username` / `admin.password` (`application.yaml`),
+backed by `ADMIN_USERNAME` / `ADMIN_PASSWORD` env vars:
+
+- **Local:** falls back to `admin` / `changeme` if the env vars aren't set — fine for
+  local dev, change it if you'll leave the app running somewhere reachable.
+- **Prod:** both env vars are required — startup fails loudly if either is missing,
+  rather than silently running with the local default.
+
+The `GET`/`DELETE` endpoints on `/api/leads` require the same admin login (submitting
+the form via `POST /api/leads` stays public, since visitors use it with no account).
 
 ## Deployment
 

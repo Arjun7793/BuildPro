@@ -20,3 +20,9 @@ logging:
     # %X{requestId} pulls the correlation id RequestLoggingFilter puts in MDC,
     # so every log line for one request can be grep'd together.
     console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%X{requestId}] %-5level %logger{36} - %msg%n"
+
+# Single admin account guarding /admin/** and the leads GET/DELETE endpoints
+# (see config/SecurityConfig.java). Overridden per-profile / via env vars.
+admin:
+  username: ${ADMIN_USERNAME:admin}
+  password: ${ADMIN_PASSWORD:changeme}

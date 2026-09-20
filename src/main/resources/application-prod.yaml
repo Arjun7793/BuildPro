@@ -26,3 +26,9 @@ springdoc:
     enabled: false
   swagger-ui:
     enabled: false
+
+# No fallback defaults in prod - startup fails loudly if these aren't set,
+# instead of silently running with the insecure admin/changeme local default.
+admin:
+  username: ${ADMIN_USERNAME}
+  password: ${ADMIN_PASSWORD}

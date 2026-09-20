@@ -4,6 +4,17 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+### Added
+- Admin-only leads page at `/admin/leads.html` — a styled table (matching the public
+  site's theme) listing contact-form submissions newest first, with per-row delete.
+  Protected by Spring Security HTTP Basic auth (`org.springframework.boot:spring-boot-
+  starter-security`), configured in `config/SecurityConfig.java` with a single admin
+  account from `admin.username`/`admin.password` (`ADMIN_USERNAME`/`ADMIN_PASSWORD` env
+  vars — local falls back to `admin`/`changeme`, prod requires both to be set explicitly).
+  `GET`/`DELETE` on `/api/leads` now require the same login; `POST /api/leads` (the
+  contact form itself) and every other endpoint stay public, unchanged from before.
+
+
 ### Fixed
 - Railway runtime crash: `data.sql` ran before Hibernate created the schema, failing with
   `relation "services" does not exist` during the one-time production bootstrap (schema creation +
