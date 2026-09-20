@@ -13,3 +13,11 @@ spring:
     username: postgres
     password: Hertzberger7793
     driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    defer-datasource-initialization: true
+  sql:
+    init:
+      mode: always

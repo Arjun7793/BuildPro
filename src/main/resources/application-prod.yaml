@@ -7,9 +7,15 @@ logging:
     root: WARN
     com.example.sample_starter: INFO
 
-# Example placeholders for when you add a datasource dependency:
-# spring:
-#   datasource:
-#     url: ${DB_URL}
-#     username: ${DB_USERNAME}
-#     password: ${DB_PASSWORD}
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+  sql:
+    init:
+      mode: never
+  # datasource:
+  #   url: ${DB_URL}
+  #   username: ${DB_USERNAME}
+  #   password: ${DB_PASSWORD}
