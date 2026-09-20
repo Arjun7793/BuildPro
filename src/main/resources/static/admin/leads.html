@@ -83,6 +83,24 @@ background:#222;
 color:#ffb400;
 }
 
+.header-actions{
+display:flex;
+align-items:center;
+gap:20px;
+}
+
+.nav-link{
+color:#ccc;
+text-decoration:none;
+font-size:14px;
+font-weight:500;
+transition:.3s;
+}
+
+.nav-link:hover{
+color:#ffb400;
+}
+
 .card{
 background:white;
 border-radius:10px;
@@ -202,7 +220,10 @@ margin-bottom:2px;
 
 <header>
 <div class="logo">BuildPro<span>Admin &middot; Leads</span></div>
+<div class="header-actions">
+<a class="nav-link" href="/admin/content">Manage site content &rarr;</a>
 <button class="btn" id="refresh-btn">Refresh</button>
+</div>
 </header>
 
 <main>

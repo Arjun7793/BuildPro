@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BuildPro Admin - Content</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+font-family:'Poppins',sans-serif;
+}
+
+body{
+background:#f7f7f7;
+color:#333;
+}
+
+header{
+background:#222;
+padding:18px 8%;
+display:flex;
+justify-content:space-between;
+align-items:center;
+position:sticky;
+top:0;
+z-index:100;
+}
+
+.logo{
+font-size:26px;
+font-weight:700;
+color:#ffb400;
+}
+
+.logo span{
+color:white;
+font-weight:400;
+font-size:16px;
+margin-left:10px;
+}
+
+.header-actions{
+display:flex;
+align-items:center;
+gap:20px;
+}
+
+.nav-link{
+color:#ccc;
+text-decoration:none;
+font-size:14px;
+font-weight:500;
+transition:.3s;
+}
+
+.nav-link:hover{
+color:#ffb400;
+}
+
+main{
+padding:50px 8%;
+}
+
+.title{
+font-size:32px;
+color:#222;
+margin-bottom:10px;
+}
+
+.subtitle{
+color:#777;
+margin-bottom:40px;
+}
+
+.section{
+margin-bottom:50px;
+}
+
+.section-header{
+display:flex;
+justify-content:space-between;
+align-items:center;
+margin-bottom:16px;
+}
+
+.section-title{
+font-size:22px;
+color:#222;
+display:flex;
+align-items:center;
+gap:10px;
+}
+
+.section-count{
+font-size:13px;
+color:#999;
+font-weight:400;
+}
+
+.btn{
+padding:10px 22px;
+background:#ffb400;
+color:#222;
+font-weight:bold;
+border:none;
+border-radius:5px;
+cursor:pointer;
+transition:.3s;
+font-size:14px;
+}
+
+.btn:hover{
+background:#222;
+color:#ffb400;
+}
+
+.btn-secondary{
+background:none;
+border:1px solid #ccc;
+color:#555;
+}
+
+.btn-secondary:hover{
+background:#eee;
+color:#333;
+}
+
+.card{
+background:white;
+border-radius:10px;
+box-shadow:0 5px 20px rgba(0,0,0,.1);
+overflow:hidden;
+}
+
+table{
+width:100%;
+border-collapse:collapse;
+}
+
+thead th{
+text-align:left;
+background:#222;
+color:#ffb400;
+padding:14px 20px;
+font-weight:600;
+font-size:13px;
+text-transform:uppercase;
+letter-spacing:.5px;
+}
+
+tbody td{
+padding:14px 20px;
+border-bottom:1px solid #eee;
+vertical-align:top;
+font-size:15px;
+}
+
+tbody tr:last-child td{
+border-bottom:none;
+}
+
+tbody tr:hover{
+background:#fafafa;
+}
+
+.thumb{
+width:60px;
+height:44px;
+object-fit:cover;
+border-radius:5px;
+display:block;
+}
+
+.text-cell{
+max-width:280px;
+color:#555;
+overflow:hidden;
+text-overflow:ellipsis;
+white-space:nowrap;
+}
+
+.row-actions{
+display:flex;
+gap:8px;
+white-space:nowrap;
+}
+
+.icon-btn{
+background:none;
+border:1px solid #ccc;
+color:#555;
+padding:6px 14px;
+border-radius:5px;
+cursor:pointer;
+font-size:13px;
+font-weight:600;
+transition:.3s;
+}
+
+.icon-btn:hover{
+background:#222;
+color:#ffb400;
+border-color:#222;
+}
+
+.icon-btn.delete{
+border-color:#d9534f;
+color:#d9534f;
+}
+
+.icon-btn.delete:hover{
+background:#d9534f;
+color:white;
+}
+
+.empty-state,.error-state,.loading-state{
+padding:40px 20px;
+text-align:center;
+color:#888;
+font-size:14px;
+}
+
+.error-state{
+color:#d9534f;
+}
+
+footer{
+background:#111;
+color:white;
+text-align:center;
+padding:24px;
+font-size:14px;
+}
+
+/* Modal */
+
+.modal-overlay{
+position:fixed;
+top:0;
+left:0;
+width:100%;
+height:100%;
+background:rgba(0,0,0,.55);
+display:flex;
+align-items:center;
+justify-content:center;
+padding:20px;
+z-index:1000;
+}
+
+.modal-overlay[hidden]{
+display:none;
+}
+
+.modal{
+background:white;
+border-radius:10px;
+width:100%;
+max-width:480px;
+max-height:90vh;
+overflow-y:auto;
+box-shadow:0 10px 40px rgba(0,0,0,.3);
+}
+
+.modal-header{
+padding:22px 26px;
+border-bottom:1px solid #eee;
+display:flex;
+justify-content:space-between;
+align-items:center;
+}
+
+.modal-header h2{
+font-size:20px;
+color:#222;
+}
+
+.modal-close{
+background:none;
+border:none;
+font-size:22px;
+color:#999;
+cursor:pointer;
+line-height:1;
+}
+
+.modal-close:hover{
+color:#333;
+}
+
+.modal-body{
+padding:22px 26px;
+}
+
+.field{
+margin-bottom:18px;
+}
+
+.field label{
+display:block;
+font-size:13px;
+font-weight:600;
+color:#555;
+margin-bottom:6px;
+}
+
+.field input,.field textarea{
+width:100%;
+padding:12px 14px;
+border:1px solid #ccc;
+border-radius:5px;
+font-size:14px;
+font-family:'Poppins',sans-serif;
+}
+
+.field textarea{
+resize:vertical;
+min-height:80px;
+}
+
+.field .hint{
+font-size:12px;
+color:#999;
+margin-top:4px;
+}
+
+.modal-footer{
+padding:18px 26px;
+border-top:1px solid #eee;
+display:flex;
+justify-content:flex-end;
+gap:12px;
+}
+
+.modal-error{
+color:#d9534f;
+font-size:13px;
+margin-top:-8px;
+margin-bottom:14px;
+min-height:16px;
+}
+
+@media(max-width:768px){
+main{padding:30px 5%;}
+table,thead,tbody,th,td,tr{display:block;}
+thead{display:none;}
+tbody tr{
+background:white;
+border-radius:10px;
+box-shadow:0 5px 20px rgba(0,0,0,.08);
+margin-bottom:16px;
+padding:16px;
+}
+tbody td{
+border-bottom:none;
+padding:6px 0;
+}
+tbody td::before{
+content:attr(data-label);
+display:block;
+font-size:11px;
+text-transform:uppercase;
+color:#aaa;
+margin-bottom:2px;
+}
+.text-cell{max-width:none;white-space:normal;}
+.card{background:none;box-shadow:none;}
+}
+
+</style>
+</head>
+<body>
+
+<header>
+<div class="logo">BuildPro<span>Admin &middot; Content</span></div>
+<div class="header-actions">
+<a class="nav-link" href="/admin/leads">View leads &rarr;</a>
+</div>
+</header>
+
+<main>
+<div class="title">Site content</div>
+<div class="subtitle">Everything shown on the public page, editable here. Changes go live immediately.</div>
+
+<div id="sections"></div>
+</main>
+
+<footer>&copy; <span id="year"></span> BuildPro Construction &mdash; Admin area</footer>
+
+<div class="modal-overlay" id="modal-overlay" hidden>
+<div class="modal">
+<div class="modal-header">
+<h2 id="modal-title">Add item</h2>
+<button class="modal-close" id="modal-close" type="button">&times;</button>
+</div>
+<form id="modal-form">
+<div class="modal-body" id="modal-body"></div>
+<div class="modal-body" style="padding-top:0">
+<div class="modal-error" id="modal-error"></div>
+</div>
+<div class="modal-footer">
+<button type="button" class="btn btn-secondary" id="modal-cancel">Cancel</button>
+<button type="submit" class="btn" id="modal-save">Save</button>
+</div>
+</form>
+</div>
+</div>
+
+<script>
+document.getElementById('year').textContent = new Date().getFullYear();
+
+// One entry per content type. `path` is the REST base path, `columns` drive the
+// table (key into the item + a display label), `fields` drive the add/edit form
+// (name/label/type/required/placeholder), matching the entities in
+// com.example.buildpro.entity.
+var SECTIONS = [
+  {
+    key: 'services',
+    title: 'Services',
+    path: '/api/services',
+    singular: 'service',
+    columns: [
+      {key:'title', label:'Title'},
+      {key:'description', label:'Description', text:true},
+      {key:'displayOrder', label:'Order'}
+    ],
+    fields: [
+      {name:'title', label:'Title', type:'text', required:true},
+      {name:'description', label:'Description', type:'textarea'},
+      {name:'displayOrder', label:'Display order', type:'number', hint:'Lower numbers show first.'}
+    ]
+  },
+  {
+    key: 'stats',
+    title: 'Stats',
+    path: '/api/stats',
+    singular: 'stat',
+    columns: [
+      {key:'label', label:'Label'},
+      {key:'targetValue', label:'Value'},
+      {key:'displayOrder', label:'Order'}
+    ],
+    fields: [
+      {name:'label', label:'Label', type:'text', required:true, placeholder:'e.g. Projects Completed'},
+      {name:'targetValue', label:'Value', type:'number', required:true},
+      {name:'displayOrder', label:'Display order', type:'number', hint:'Lower numbers show first.'}
+    ]
+  },
+  {
+    key: 'projects',
+    title: 'Projects',
+    path: '/api/projects',
+    singular: 'project',
+    columns: [
+      {key:'imageUrl', label:'Image', image:true},
+      {key:'title', label:'Title'},
+      {key:'displayOrder', label:'Order'}
+    ],
+    fields: [
+      {name:'imageUrl', label:'Image URL', type:'text', required:true, placeholder:'https://...'},
+      {name:'title', label:'Title', type:'text'},
+      {name:'displayOrder', label:'Display order', type:'number', hint:'Lower numbers show first.'}
+    ]
+  },
+  {
+    key: 'testimonials',
+    title: 'Testimonials',
+    path: '/api/testimonials',
+    singular: 'testimonial',
+    columns: [
+      {key:'clientName', label:'Client'},
+      {key:'message', label:'Message', text:true},
+      {key:'rating', label:'Rating'},
+      {key:'displayOrder', label:'Order'}
+    ],
+    fields: [
+      {name:'clientName', label:'Client name', type:'text', required:true},
+      {name:'message', label:'Message', type:'textarea'},
+      {name:'rating', label:'Rating (1-5)', type:'number'},
+      {name:'displayOrder', label:'Display order', type:'number', hint:'Lower numbers show first.'}
+    ]
+  },
+  {
+    key: 'company-info',
+    title: 'Company info',
+    path: '/api/company-info',
+    singular: 'company info record',
+    columns: [
+      {key:'companyName', label:'Company'},
+      {key:'address', label:'Address', text:true},
+      {key:'phone', label:'Phone'},
+      {key:'email', label:'Email'}
+    ],
+    fields: [
+      {name:'companyName', label:'Company name', type:'text', required:true},
+      {name:'address', label:'Address', type:'text'},
+      {name:'phone', label:'Phone', type:'text'},
+      {name:'email', label:'Email', type:'text'}
+    ]
+  }
+];
+
+var sectionsEl = document.getElementById('sections');
+var overlay = document.getElementById('modal-overlay');
+var modalTitle = document.getElementById('modal-title');
+var modalBody = document.getElementById('modal-body');
+var modalForm = document.getElementById('modal-form');
+var modalError = document.getElementById('modal-error');
+var modalSaveBtn = document.getElementById('modal-save');
+
+var activeSection = null;
+var activeItem = null;
+
+function escapeHtml(str){
+if(str === null || str === undefined) return '';
+return String(str)
+.replace(/&/g,'&amp;')
+.replace(/</g,'&lt;')
+.replace(/>/g,'&gt;')
+.replace(/"/g,'&quot;');
+}
+
+function buildSectionMarkup(section){
+return '' +
+'<div class="section" id="section-' + section.key + '">' +
+'<div class="section-header">' +
+'<div class="section-title">' + section.title + ' <span class="section-count" id="count-' + section.key + '"></span></div>' +
+'<button class="btn" data-add="' + section.key + '">+ Add ' + section.singular + '</button>' +
+'</div>' +
+'<div class="card"><div id="body-' + section.key + '"><div class="loading-state">Loading&hellip;</div></div></div>' +
+'</div>';
+}
+
+SECTIONS.forEach(function(section){
+sectionsEl.insertAdjacentHTML('beforeend', buildSectionMarkup(section));
+});
+
+sectionsEl.addEventListener('click', function(e){
+var addBtn = e.target.closest('[data-add]');
+if(addBtn){
+var section = SECTIONS.find(function(s){ return s.key === addBtn.getAttribute('data-add'); });
+openModal(section, null);
+return;
+}
+var editBtn = e.target.closest('[data-edit]');
+if(editBtn){
+var section = SECTIONS.find(function(s){ return s.key === editBtn.getAttribute('data-section'); });
+var id = editBtn.getAttribute('data-edit');
+var item = section._items.find(function(i){ return String(i.id) === String(id); });
+openModal(section, item);
+return;
+}
+var delBtn = e.target.closest('[data-delete]');
+if(delBtn){
+var section = SECTIONS.find(function(s){ return s.key === delBtn.getAttribute('data-section'); });
+var id = delBtn.getAttribute('data-delete');
+deleteItem(section, id, delBtn);
+return;
+}
+});
+
+async function loadSection(section){
+var bodyEl = document.getElementById('body-' + section.key);
+var countEl = document.getElementById('count-' + section.key);
+bodyEl.innerHTML = '<div class="loading-state">Loading&hellip;</div>';
+try{
+var res = await fetch(section.path, {credentials:'same-origin'});
+if(!res.ok){
+throw new Error('Request failed with status ' + res.status);
+}
+var items = await res.json();
+section._items = items;
+countEl.textContent = items.length + (items.length === 1 ? ' item' : ' items');
+renderTable(section, bodyEl, items);
+}catch(err){
+bodyEl.innerHTML = '<div class="error-state">Couldn\'t load ' + section.title.toLowerCase() + ': ' + escapeHtml(err.message) + '</div>';
+countEl.textContent = '';
+}
+}
+
+function renderCell(col, item){
+var value = item[col.key];
+if(col.image){
+return value ? '<img class="thumb" src="' + escapeHtml(value) + '" alt="">' : '&mdash;';
+}
+if(col.text){
+return '<span class="text-cell" title="' + escapeHtml(value || '') + '">' + (value ? escapeHtml(value) : '&mdash;') + '</span>';
+}
+return value === null || value === undefined || value === '' ? '&mdash;' : escapeHtml(value);
+}
+
+function renderTable(section, bodyEl, items){
+if(items.length === 0){
+bodyEl.innerHTML = '<div class="empty-state">Nothing here yet. Use "+ Add ' + section.singular + '" to create one.</div>';
+return;
+}
+
+var headerCells = section.columns.map(function(c){ return '<th>' + c.label + '</th>'; }).join('') + '<th></th>';
+
+var rows = items.map(function(item){
+var cells = section.columns.map(function(col){
+return '<td data-label="' + col.label + '">' + renderCell(col, item) + '</td>';
+}).join('');
+return '<tr>' + cells +
+'<td data-label="Action"><div class="row-actions">' +
+'<button class="icon-btn" data-edit="' + item.id + '" data-section="' + section.key + '">Edit</button>' +
+'<button class="icon-btn delete" data-delete="' + item.id + '" data-section="' + section.key + '">Delete</button>' +
+'</div></td></tr>';
+}).join('');
+
+bodyEl.innerHTML = '<table><thead><tr>' + headerCells + '</tr></thead><tbody>' + rows + '</tbody></table>';
+}
+
+function openModal(section, item){
+activeSection = section;
+activeItem = item;
+modalTitle.textContent = (item ? 'Edit ' : 'Add ') + section.singular;
+modalError.textContent = '';
+
+modalBody.innerHTML = section.fields.map(function(field){
+var value = item ? item[field.name] : '';
+var input = field.type === 'textarea'
+? '<textarea name="' + field.name + '"' + (field.required ? ' required' : '') + (field.placeholder ? ' placeholder="' + escapeHtml(field.placeholder) + '"' : '') + '>' + escapeHtml(value) + '</textarea>'
+: '<input type="' + field.type + '" name="' + field.name + '" value="' + escapeHtml(value) + '"' + (field.required ? ' required' : '') + (field.placeholder ? ' placeholder="' + escapeHtml(field.placeholder) + '"' : '') + '>';
+return '<div class="field"><label>' + field.label + (field.required ? ' *' : '') + '</label>' + input +
+(field.hint ? '<div class="hint">' + field.hint + '</div>' : '') + '</div>';
+}).join('');
+
+overlay.hidden = false;
+}
+
+function closeModal(){
+overlay.hidden = true;
+activeSection = null;
+activeItem = null;
+modalForm.reset();
+}
+
+document.getElementById('modal-close').addEventListener('click', closeModal);
+document.getElementById('modal-cancel').addEventListener('click', closeModal);
+overlay.addEventListener('click', function(e){
+if(e.target === overlay) closeModal();
+});
+
+modalForm.addEventListener('submit', async function(e){
+e.preventDefault();
+if(!activeSection) return;
+
+var payload = {};
+activeSection.fields.forEach(function(field){
+var raw = modalForm.elements[field.name].value;
+if(field.type === 'number'){
+payload[field.name] = raw === '' ? null : Number(raw);
+}else{
+payload[field.name] = raw === '' ? null : raw;
+}
+});
+
+modalSaveBtn.disabled = true;
+modalSaveBtn.textContent = 'Saving…';
+modalError.textContent = '';
+
+try{
+var url = activeItem ? activeSection.path + '/' + activeItem.id : activeSection.path;
+var method = activeItem ? 'PUT' : 'POST';
+var res = await fetch(url, {
+method: method,
+credentials: 'same-origin',
+headers: {'Content-Type': 'application/json'},
+body: JSON.stringify(payload)
+});
+if(!res.ok){
+var errorBody = null;
+try{ errorBody = await res.json(); }catch(_){}
+var message = (errorBody && errorBody.message) ? errorBody.message : ('Save failed with status ' + res.status);
+throw new Error(message);
+}
+closeModal();
+loadSection(activeSection);
+}catch(err){
+modalError.textContent = err.message;
+}finally{
+modalSaveBtn.disabled = false;
+modalSaveBtn.textContent = 'Save';
+}
+});
+
+async function deleteItem(section, id, btn){
+if(!confirm('Delete this ' + section.singular + '? This can\'t be undone.')) return;
+btn.disabled = true;
+btn.textContent = 'Deleting…';
+try{
+var res = await fetch(section.path + '/' + id, {method:'DELETE', credentials:'same-origin'});
+if(!res.ok && res.status !== 204){
+throw new Error('Delete failed with status ' + res.status);
+}
+loadSection(section);
+}catch(err){
+alert('Couldn\'t delete: ' + err.message);
+btn.disabled = false;
+btn.textContent = 'Delete';
+}
+}
+
+SECTIONS.forEach(loadSection);
+</script>
+
+</body>
+</html>

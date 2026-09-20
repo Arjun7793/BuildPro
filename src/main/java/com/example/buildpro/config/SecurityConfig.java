@@ -13,11 +13,12 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 
-// Protects the admin leads page and the read/delete leads endpoints with a single
-// admin account (HTTP Basic - the browser shows its native login prompt, no custom
-// login form needed). Everything else - the public site, the combined /api/content
-// endpoint, the other resource CRUD endpoints, and submitting a lead via the contact
-// form - stays open, matching how the API worked before this was added.
+// Protects everything under /admin/**, plus every write (POST/PUT/DELETE) on the
+// site content endpoints (services, stats, projects, testimonials, company-info)
+// and the leads read/delete endpoints, with a single admin account (HTTP Basic -
+// the browser shows its native login prompt, no custom login form needed). Reading
+// content (GET) stays public everywhere - the live site depends on it - and so does
+// submitting the contact form (POST /api/leads).
 //
 // Credentials come from admin.username/admin.password (see application.yaml),
 // backed by ADMIN_USERNAME/ADMIN_PASSWORD env vars. Local dev falls back to
@@ -53,10 +54,26 @@ public class SecurityConfig {
                 // not cookie/session based auth - CSRF protection isn't needed here.
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
+                        // Rules are matched in order - the more specific admin-only rules
+                        // must come before the broad "every GET is public" rule below,
+                        // otherwise that broader match would win first and the specific
+                        // ones would never be reached.
                         .requestMatchers(HttpMethod.POST, "/api/leads").permitAll()
                         .requestMatchers("/admin/**").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/leads", "/api/leads/**").authenticated()
                         .requestMatchers(HttpMethod.DELETE, "/api/leads/**").authenticated()
+                        .requestMatchers(HttpMethod.POST,
+                                "/api/services", "/api/stats", "/api/projects",
+                                "/api/testimonials", "/api/company-info").authenticated()
+                        .requestMatchers(HttpMethod.PUT,
+                                "/api/services/**", "/api/stats/**", "/api/projects/**",
+                                "/api/testimonials/**", "/api/company-info/**").authenticated()
+                        .requestMatchers(HttpMethod.DELETE,
+                                "/api/services/**", "/api/stats/**", "/api/projects/**",
+                                "/api/testimonials/**", "/api/company-info/**").authenticated()
+                        // Everything else - every GET (the live site's own content
+                        // fetch, /api/content included) and anything not matched above -
+                        // stays public.
                         .anyRequest().permitAll()
                 )
                 .httpBasic(basic -> {})

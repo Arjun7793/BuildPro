@@ -88,15 +88,17 @@ non-JSON `Accept` headers get `406`).
 
 | Resource | Base path | Methods |
 | --- | --- | --- |
-| Services | `/api/services` | GET, GET/{id}, POST, PUT/{id}, DELETE/{id} |
-| Stats | `/api/stats` | GET, GET/{id}, POST, PUT/{id}, DELETE/{id} |
-| Projects | `/api/projects` | GET, GET/{id}, POST, PUT/{id}, DELETE/{id} |
-| Testimonials | `/api/testimonials` | GET, GET/{id}, POST, PUT/{id}, DELETE/{id} |
-| Company info | `/api/company-info` | GET, GET/{id}, POST, PUT/{id}, DELETE/{id} |
+| Services | `/api/services` | GET, GET/{id}, POST\*, PUT/{id}\*, DELETE/{id}\* |
+| Stats | `/api/stats` | GET, GET/{id}, POST\*, PUT/{id}\*, DELETE/{id}\* |
+| Projects | `/api/projects` | GET, GET/{id}, POST\*, PUT/{id}\*, DELETE/{id}\* |
+| Testimonials | `/api/testimonials` | GET, GET/{id}, POST\*, PUT/{id}\*, DELETE/{id}\* |
+| Company info | `/api/company-info` | GET, GET/{id}, POST\*, PUT/{id}\*, DELETE/{id}\* |
 | Leads (contact form) | `/api/leads` | GET\*, GET/{id}\*, POST, DELETE/{id}\* (no PUT) |
 | Combined content | `/api/content` | GET — everything above in one call, what the page itself fetches |
 
-\* Requires the admin login (see Admin area below); `POST` stays public for the contact form itself.
+\* Requires the admin login (see Admin area below). Reading content (`GET`) and
+submitting the contact form (`POST /api/leads`) stay public — the live site and its
+visitors depend on both.
 
 Full curl examples with sample requests and responses are in the "buildpro API
 curl Reference" doc. Bad requests return a consistent JSON error shape via
@@ -128,12 +130,20 @@ can be found together.
 
 ## Admin area
 
-Contact form submissions (leads) are viewable separately from the public site, at
-`/admin/leads` (a clean-URL forward to the static `/admin/leads.html` page, see
-`AdminViewController`), protected by a single admin account (HTTP Basic — the browser
-shows its native login prompt, no custom login form). Everything else (the public
-site, `/api/content`, and submitting the contact form itself) stays open, same as
-before.
+Two admin-only pages, cross-linked to each other, both protected by the same single
+admin account (HTTP Basic — the browser shows its native login prompt, no custom
+login form):
+
+- **`/admin/leads`** — view and delete contact form submissions.
+- **`/admin/content`** — add, edit, and delete everything shown on the public site:
+  services, stats, projects, testimonials, and company info. Each section is a table
+  with an "+ Add" button; editing opens a small form in a modal. Changes go live
+  immediately, since the public page reads the same data via `/api/content`.
+
+Both are clean-URL forwards to their static pages (`/admin/leads.html` /
+`/admin/content.html`, see `AdminViewController`) so the address bar never shows the
+`.html` suffix. Everything else — the public site, `/api/content`, and submitting the
+contact form itself — stays open, same as before.
 
 Credentials come from `admin.username` / `admin.password` (`application.yaml`),
 backed by `ADMIN_USERNAME` / `ADMIN_PASSWORD` env vars:
@@ -145,12 +155,17 @@ backed by `ADMIN_USERNAME` / `ADMIN_PASSWORD` env vars:
 
 The `GET`/`DELETE` endpoints on `/api/leads` require the same admin login (submitting
 the form via `POST /api/leads` stays public, since visitors use it with no account).
+Likewise, `POST`/`PUT`/`DELETE` on `/api/services`, `/api/stats`, `/api/projects`,
+`/api/testimonials`, and `/api/company-info` now require the admin login — `GET` on
+all of them stays public, since the live site's own `/api/content` call depends on it.
+If anything else was calling those write endpoints without credentials, it'll now get
+a `401`.
 
-The page displays submission times in a configurable timezone (`app.display-timezone`
-in `application.yaml`, backed by the `DISPLAY_TIMEZONE` env var, defaulting to
-`Asia/Kolkata`) — fetched at page load from `GET /api/config`, not hardcoded in the
-page itself. Submission times are stored on the server in UTC (the JVM's clock on
-Railway), so this only affects how they're *displayed*.
+The leads page displays submission times in a configurable timezone
+(`app.display-timezone` in `application.yaml`, backed by the `DISPLAY_TIMEZONE` env
+var, defaulting to `Asia/Kolkata`) — fetched at page load from `GET /api/config`, not
+hardcoded in the page itself. Submission times are stored on the server in UTC (the
+JVM's clock on Railway), so this only affects how they're *displayed*.
 
 ## Deployment
 

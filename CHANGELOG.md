@@ -5,6 +5,17 @@ All notable changes to this project are documented here.
 ## [Unreleased]
 
 ### Added
+- Admin-only content management page at `/admin/content` — add, edit, and delete
+  services, stats, projects, testimonials, and company info from one page, styled to
+  match the rest of the admin area. Each content type is a table with an "+ Add"
+  button; editing opens a small modal form (`static/admin/content.html`). Cross-linked
+  with the leads page (`/admin/leads` ↔ `/admin/content`) so admins can move between
+  the two. Served at the clean URL via `AdminViewController`, same forward pattern as
+  `/admin/leads`.
+- `POST`/`PUT`/`DELETE` on `/api/services`, `/api/stats`, `/api/projects`,
+  `/api/testimonials`, and `/api/company-info` now require the same admin login as the
+  leads endpoints (`config/SecurityConfig.java`). `GET` on all of them stays public —
+  the live site's own `/api/content` call depends on it.
 - Admin-only leads page at `/admin/leads.html` — a styled table (matching the public
   site's theme) listing contact-form submissions newest first, with per-row delete.
   Protected by Spring Security HTTP Basic auth (`org.springframework.boot:spring-boot-
