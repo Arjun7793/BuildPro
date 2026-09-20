@@ -238,11 +238,36 @@ return String(str)
 .replace(/"/g,'&quot;');
 }
 
+// Fetched once at load from /api/config (backed by app.display-timezone in
+// application.yaml, DISPLAY_TIMEZONE env var) - not hardcoded here, so changing
+// the configured zone doesn't need a code/page change.
+var displayTimezone = 'UTC';
+
+async function loadConfig(){
+try{
+var res = await fetch('/api/config', {credentials:'same-origin'});
+if(res.ok){
+var config = await res.json();
+if(config.displayTimezone) displayTimezone = config.displayTimezone;
+}
+}catch(err){
+// Falls back to UTC below if this fails - not fatal, just less friendly.
+}
+}
+
 function formatDate(iso){
 if(!iso) return '';
-var d = new Date(iso);
+// The backend sends a naive LocalDateTime (no timezone offset, e.g.
+// "2026-09-20T04:45:00") captured with the server clock, which runs in UTC on
+// Railway. A string with no offset is parsed by the browser as LOCAL time, which
+// would silently show the wrong hour - so treat it as UTC explicitly, then format
+// in the configured display timezone regardless of the viewer's own timezone.
+var hasOffset = /[Zz]|[+-]\d\d:\d\d$/.test(iso);
+var d = new Date(hasOffset ? iso : iso + 'Z');
 if(isNaN(d.getTime())) return iso;
-return d.toLocaleString(undefined, {year:'numeric', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'});
+var formatted = d.toLocaleString('en-IN', {timeZone: displayTimezone, year:'numeric', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit', hour12:true});
+var abbrev = new Intl.DateTimeFormat('en-US', {timeZone: displayTimezone, timeZoneName:'short'}).formatToParts(d).find(function(p){return p.type === 'timeZoneName';});
+return formatted + (abbrev ? ' ' + abbrev.value : '');
 }
 
 async function loadLeads(){
@@ -319,7 +344,7 @@ btn.textContent = 'Delete';
 }
 
 refreshBtn.addEventListener('click', loadLeads);
-loadLeads();
+loadConfig().then(loadLeads);
 </script>
 
 </body>

@@ -26,3 +26,8 @@ logging:
 admin:
   username: ${ADMIN_USERNAME:admin}
   password: ${ADMIN_PASSWORD:changeme}
+
+# Timezone the admin leads page displays submission times in - not where the app
+# code runs (that's UTC on Railway), just how times are shown to viewers.
+app:
+  display-timezone: ${DISPLAY_TIMEZONE:Asia/Kolkata}

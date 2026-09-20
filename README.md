@@ -129,7 +129,8 @@ can be found together.
 ## Admin area
 
 Contact form submissions (leads) are viewable separately from the public site, at
-`/admin/leads.html`, protected by a single admin account (HTTP Basic — the browser
+`/admin/leads` (a clean-URL forward to the static `/admin/leads.html` page, see
+`AdminViewController`), protected by a single admin account (HTTP Basic — the browser
 shows its native login prompt, no custom login form). Everything else (the public
 site, `/api/content`, and submitting the contact form itself) stays open, same as
 before.
@@ -144,6 +145,12 @@ backed by `ADMIN_USERNAME` / `ADMIN_PASSWORD` env vars:
 
 The `GET`/`DELETE` endpoints on `/api/leads` require the same admin login (submitting
 the form via `POST /api/leads` stays public, since visitors use it with no account).
+
+The page displays submission times in a configurable timezone (`app.display-timezone`
+in `application.yaml`, backed by the `DISPLAY_TIMEZONE` env var, defaulting to
+`Asia/Kolkata`) — fetched at page load from `GET /api/config`, not hardcoded in the
+page itself. Submission times are stored on the server in UTC (the JVM's clock on
+Railway), so this only affects how they're *displayed*.
 
 ## Deployment
 

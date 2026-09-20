@@ -13,6 +13,23 @@ All notable changes to this project are documented here.
   vars — local falls back to `admin`/`changeme`, prod requires both to be set explicitly).
   `GET`/`DELETE` on `/api/leads` now require the same login; `POST /api/leads` (the
   contact form itself) and every other endpoint stay public, unchanged from before.
+- Admin leads page is now reachable at the clean URL `/admin/leads` (forwards
+  internally to the static `/admin/leads.html`, via `AdminViewController`), instead of
+  requiring the `.html` suffix.
+
+### Fixed
+- Admin leads page showed the wrong submission time: the backend sends a naive
+  `LocalDateTime` (no timezone offset), captured by the server clock (UTC on
+  Railway), but browsers parse an offset-less timestamp as local time — so a lead
+  submitted at 04:45 UTC displayed as "04:45 AM" instead of the correct local
+  equivalent. Fixed by having the page treat the timestamp as UTC explicitly, then
+  format it in a configurable display timezone.
+
+### Added
+- `app.display-timezone` config (`application.yaml`, `DISPLAY_TIMEZONE` env var,
+  defaults to `Asia/Kolkata`) and a small public `GET /api/config` endpoint
+  (`AppConfigController`) exposing it — the admin leads page fetches this at load
+  instead of hardcoding a timezone in the page's JavaScript.
 
 
 ### Fixed
