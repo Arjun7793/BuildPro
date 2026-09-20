@@ -17,6 +17,17 @@ spring:
 
 server:
   port: 8080
+  # Railway (like most PaaS platforms) terminates TLS at its own edge proxy and
+  # forwards to this app over plain HTTP internally, adding X-Forwarded-Proto/
+  # Host/Port headers saying the original request was HTTPS. Without this,
+  # Spring/Tomcat has no way to know that - request.isSecure() reports false,
+  # and anything that builds an absolute URL from the request (a login redirect,
+  # a Secure cookie flag) ends up using http:// even though the site is only
+  # ever reached over https://, which browsers then block as mixed content.
+  # "framework" makes Spring itself (not just the servlet container) honor
+  # those headers. Harmless locally - there's no proxy there, so the headers
+  # are simply absent and nothing changes.
+  forward-headers-strategy: framework
 
 logging:
   level:

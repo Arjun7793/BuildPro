@@ -4,6 +4,16 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+### Fixed
+- Admin login was unreachable on Railway ("Failed to fetch" / a browser mixed-content
+  block on `http://.../admin/login?error`): Railway terminates TLS at its edge and
+  forwards to the app over plain HTTP internally, so Spring/Tomcat had no way to
+  know the original request was HTTPS, and built the login redirect (and the CSRF
+  cookie's Secure flag) using `http://` instead. Fixed with
+  `server.forward-headers-strategy: framework` (`application.yaml`), which makes
+  Spring honor Railway's `X-Forwarded-Proto`/`Host`/`Port` headers. No effect
+  locally, since there's no proxy there to send those headers.
+
 ### Added
 - Rate limit on `POST /api/leads` (the public contact form, the one write
   endpoint that doesn't require admin login): at most 5 submissions per 10
