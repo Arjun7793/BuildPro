@@ -219,29 +219,72 @@ against a Railway-managed Postgres service. Live URL:
 - Full write-up of the deployment steps, the issues hit along the way, and how each
   was fixed is in the "buildpro Deployment Guide" doc.
 
-### Database migration (required for the project image upload feature)
+### Database migrations (Liquibase)
 
 `spring.jpa.hibernate.ddl-auto` is `validate` in both profiles (see
-`application-local.yaml` / `application-prod.yaml`) — this app has no Flyway/Liquibase,
-so the schema is never changed automatically. `ProjectItem` gained two new columns
-(`image_data`, `image_content_type`) and `image_url` is no longer `NOT NULL`, so
-**before deploying this change**, run the following once against the target Postgres
-database (for Railway: open the Postgres service → Data / Query tab, or connect with
-`psql` using the connection string from the Connect tab):
+`application-local.yaml` / `application-prod.yaml`) — Hibernate never changes the
+schema itself, it only checks the JPA mappings still match whatever's actually
+there. **Liquibase is what owns the schema now**, including seed data - there's
+no `data.sql`/`spring.sql.init` anymore. Changesets live under
+`src/main/resources/db/changelog/`, included from `db.changelog-master.yaml`:
+
+- `001-baseline-schema.yaml` - `createTable` for all 6 tables.
+- `002-seed-data.yaml` - the original static site's demo content (services,
+  stats, demo projects, testimonials, a placeholder company info row).
+
+Spring Boot runs pending changesets automatically on every startup (local and
+Railway) and tracks which ones have already run per-database in its
+`DATABASECHANGELOG` table, so each changeset - schema **or** seed data -
+executes exactly once, ever, per database, never again after that. That's a
+meaningful difference from the old `data.sql` approach: `data.sql` used
+`ON CONFLICT (id) DO NOTHING`, which protected an edited row from being
+overwritten but did nothing to stop a *deleted* row from being silently
+recreated on the next restart (delete it -> no more conflict -> `data.sql`
+just re-inserts it next time it runs). A Liquibase changeset has no such gap -
+delete a seed row through the admin panel and it's gone for good, the same as
+deleting anything else.
+
+Going forward, a schema change **or** a data change is a new changeset file
+under `db/changelog/changes/`, included from the master changelog - not
+hand-running SQL against production like the old `image_data`/
+`image_content_type` migration below, and not another `data.sql` edit.
+
+**One-time setup:** Liquibase was introduced onto databases (both local and
+Railway) that already had a live, unmanaged schema. Rather than baselining that
+existing schema, both databases were wiped and rebuilt from scratch, so
+`001-baseline-schema.yaml`'s `createTable` changesets (and `002-seed-data.yaml`'s
+inserts) run for real, instead of just being marked as already-applied, and
+Liquibase's own tracking table starts clean. **This deletes all existing data**
+(leads, services, stats, projects, testimonials, company info) - it was done
+deliberately here since there was nothing in either database worth keeping at
+the time, not something to repeat casually against a database with real data in
+it later. It's also required once more after `002-seed-data.yaml` was
+introduced: a database that already has the seed rows from the old `data.sql`
+(inserted directly, outside Liquibase's tracking) will hit a duplicate-key error
+the moment Liquibase tries to insert those same ids for real.
 
 ```sql
-ALTER TABLE projects
-    ADD COLUMN IF NOT EXISTS image_data BYTEA,
-    ADD COLUMN IF NOT EXISTS image_content_type VARCHAR(255);
-
-ALTER TABLE projects
-    ALTER COLUMN image_url DROP NOT NULL;
+-- Run against the target Postgres database (local: psql -U postgres -h
+-- localhost -d buildpro; Railway: open the Postgres service -> Data/Query tab,
+-- or psql using the connection string from the Connect tab). Dropping and
+-- recreating the "public" schema wipes every table without needing
+-- database-level create/drop privileges (Railway's managed Postgres role
+-- usually only has schema-level rights on its own database):
+DROP SCHEMA public CASCADE;
+CREATE SCHEMA public;
+GRANT ALL ON SCHEMA public TO public;
 ```
 
-Deploying the new code before running this will crash on startup (`ddl-auto: validate`
-fails fast on a schema mismatch, same failure mode as if a column were simply missing).
-Run it against local Postgres too if you use `ddl-auto: validate` locally rather than
-the `#update` fallback in `application-local.yaml`.
+Then start the app - Liquibase runs automatically on startup, before Hibernate's
+`ddl-auto: validate` check, creates all 6 tables from `001-baseline-schema.yaml`,
+and seeds them from `002-seed-data.yaml`, in that order, every time (local and
+Railway) - no separate manual reseed step. Liquibase itself guarantees it runs
+before `entityManagerFactory`, so nothing extra is needed to order those two -
+notably **not** `spring.jpa.defer-datasource-initialization`, which existed only
+for the old Hibernate-creates-the-schema setup and (combined with
+`data.sql`/`sql.init.mode: always`, back when those still existed) caused a
+startup failure - "Circular depends-on relationship between 'liquibase' and
+'entityManagerFactory'" - so it's been removed from `application-local.yaml`.
 
 ## Changelog
 

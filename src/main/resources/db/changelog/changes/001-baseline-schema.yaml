@@ -1,0 +1,202 @@
+databaseChangeLog:
+  # First Liquibase changeset for this app: creates all 6 tables from scratch.
+  # This app had no migration tool before Liquibase was introduced, so rather
+  # than baselining the schema that already existed (Hibernate's old ddl-auto
+  # output, hand-patched with raw SQL since - e.g. projects.image_data /
+  # image_content_type), both the local and Railway databases were wiped
+  # (DROP SCHEMA public CASCADE / CREATE SCHEMA public - see the "Database
+  # migrations (Liquibase)" section of README.md) so this changeset runs for
+  # real and Liquibase's own tracking table starts clean from changeset 001.
+  #
+  # id columns: the previous schema's id columns were sequence-backed (see
+  # data.sql's pg_get_serial_sequence() calls), i.e. bigserial-style, not SQL-
+  # standard GENERATED ALWAYS AS IDENTITY columns - autoIncrement: true is
+  # Liquibase's standard, cross-database way to express that, so a fresh
+  # database created from this changeset keeps the same id column style.
+  #
+  # Column lengths/nullability below match each JPA entity's @Column exactly
+  # (see the entity classes under src/main/java/.../entity/) - including
+  # projects.title, which is intentionally NOT NOT NULL at the DB level (only
+  # enforced via @NotBlank in ProjectItem - see the comment there).
+
+  - changeSet:
+      id: 001-baseline-company_info
+      author: arjun
+      comment: Baseline - company_info table already exists in production/local
+      changes:
+        - createTable:
+            tableName: company_info
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: company_name
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: address
+                  type: VARCHAR(255)
+              - column:
+                  name: phone
+                  type: VARCHAR(255)
+              - column:
+                  name: email
+                  type: VARCHAR(255)
+
+  - changeSet:
+      id: 001-baseline-leads
+      author: arjun
+      comment: Baseline - leads table already exists in production/local
+      changes:
+        - createTable:
+            tableName: leads
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: name
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: email
+                  type: VARCHAR(255)
+              - column:
+                  name: phone
+                  type: VARCHAR(255)
+              - column:
+                  name: message
+                  type: VARCHAR(2000)
+              - column:
+                  name: created_at
+                  type: TIMESTAMP
+
+  - changeSet:
+      id: 001-baseline-projects
+      author: arjun
+      comment: Baseline - projects table already exists in production/local
+      changes:
+        - createTable:
+            tableName: projects
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: image_url
+                  type: VARCHAR(1000)
+              - column:
+                  name: title
+                  type: VARCHAR(255)
+                  # Intentionally no "nullable: false" here - see the comment
+                  # at the top of this file and in ProjectItem.java.
+              - column:
+                  name: display_order
+                  type: INT
+              - column:
+                  name: image_data
+                  type: BYTEA
+              - column:
+                  name: image_content_type
+                  type: VARCHAR(255)
+
+  - changeSet:
+      id: 001-baseline-services
+      author: arjun
+      comment: Baseline - services table already exists in production/local
+      changes:
+        - createTable:
+            tableName: services
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: title
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: description
+                  type: VARCHAR(1000)
+              - column:
+                  name: display_order
+                  type: INT
+
+  - changeSet:
+      id: 001-baseline-stats
+      author: arjun
+      comment: Baseline - stats table already exists in production/local
+      changes:
+        - createTable:
+            tableName: stats
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: label
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: target_value
+                  type: INT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: display_order
+                  type: INT
+
+  - changeSet:
+      id: 001-baseline-testimonials
+      author: arjun
+      comment: Baseline - testimonials table already exists in production/local
+      changes:
+        - createTable:
+            tableName: testimonials
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: client_name
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: message
+                  type: VARCHAR(1000)
+              - column:
+                  name: rating
+                  type: INT
+              - column:
+                  name: display_order
+                  type: INT

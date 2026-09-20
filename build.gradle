@@ -9,11 +9,6 @@ version = '0.0.1-SNAPSHOT'
 description = 'buildpro'
 
 java {
-	// No toolchain: this way Gradle just uses whatever JDK is already running it
-	// (no auto-download needed, which some CI/build sandboxes block outbound
-	// access for). sourceCompatibility/targetCompatibility keep the compiled
-	// bytecode at a safe, widely-available baseline regardless of which JDK
-	// actually compiles it (your local JDK 25, Railway's JDK 21, etc.).
 	sourceCompatibility = JavaVersion.VERSION_21
 	targetCompatibility = JavaVersion.VERSION_21
 }
@@ -26,6 +21,7 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-webmvc'
 	implementation 'org.springframework.boot:spring-boot-starter-security'
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+	implementation 'org.springframework.boot:spring-boot-starter-liquibase'
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
 	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:3.1.1'
 	runtimeOnly 'org.postgresql:postgresql'

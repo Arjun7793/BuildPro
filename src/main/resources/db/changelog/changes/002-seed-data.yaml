@@ -1,0 +1,185 @@
+databaseChangeLog:
+  # Seed data matching the original static BuildPro Construction page -
+  # previously data.sql (spring.sql.init), moved here so it runs exactly
+  # ONCE per database (tracked in DATABASECHANGELOG, like every other
+  # changeset) instead of on every startup. That was the actual problem
+  # with the data.sql approach: its `ON CONFLICT (id) DO NOTHING` protected
+  # an edited row from being overwritten, but not a *deleted* row from being
+  # silently recreated on the next restart (no row left -> no conflict -> it
+  # just re-inserts). A Liquibase changeset has no such gap - once it's run
+  # against a database, it never runs again there, so deleting a seed row
+  # through the admin panel is permanent, exactly like deleting anything
+  # else. Runs after 001-baseline-schema.yaml (included second in
+  # db.changelog-master.yaml), so the tables already exist.
+  #
+  # image_data / image_content_type are intentionally left unset (NULL) on
+  # the seed projects below - they use an external image_url instead of an
+  # uploaded file. Either is valid (see ProjectItem's hybrid URL-or-upload
+  # design); image_data only gets populated by an actual admin upload via
+  # POST /api/projects/{id}/image.
+
+  - changeSet:
+      id: 002-seed-services
+      author: arjun
+      comment: Seed data - original static site services
+      changes:
+        - insert:
+            tableName: services
+            columns:
+              - column: {name: id, valueNumeric: 1}
+              - column: {name: title, value: 'Residential Construction'}
+              - column: {name: description, value: 'Luxury homes, villas and apartments.'}
+              - column: {name: display_order, valueNumeric: 1}
+        - insert:
+            tableName: services
+            columns:
+              - column: {name: id, valueNumeric: 2}
+              - column: {name: title, value: 'Commercial Buildings'}
+              - column: {name: description, value: 'Office spaces, malls and shopping complexes.'}
+              - column: {name: display_order, valueNumeric: 2}
+        - insert:
+            tableName: services
+            columns:
+              - column: {name: id, valueNumeric: 3}
+              - column: {name: title, value: 'Interior Design'}
+              - column: {name: description, value: 'Modern interiors with premium finishing.'}
+              - column: {name: display_order, valueNumeric: 3}
+        - insert:
+            tableName: services
+            columns:
+              - column: {name: id, valueNumeric: 4}
+              - column: {name: title, value: 'Renovation'}
+              - column: {name: description, value: 'House renovation and remodeling solutions.'}
+              - column: {name: display_order, valueNumeric: 4}
+        - insert:
+            tableName: services
+            columns:
+              - column: {name: id, valueNumeric: 5}
+              - column: {name: title, value: 'Architecture'}
+              - column: {name: description, value: 'Creative architectural planning.'}
+              - column: {name: display_order, valueNumeric: 5}
+        - insert:
+            tableName: services
+            columns:
+              - column: {name: id, valueNumeric: 6}
+              - column: {name: title, value: 'Project Management'}
+              - column: {name: description, value: 'End-to-end construction management.'}
+              - column: {name: display_order, valueNumeric: 6}
+
+  - changeSet:
+      id: 002-seed-stats
+      author: arjun
+      comment: Seed data - original static site stats
+      changes:
+        - insert:
+            tableName: stats
+            columns:
+              - column: {name: id, valueNumeric: 1}
+              - column: {name: label, value: 'Projects Completed'}
+              - column: {name: target_value, valueNumeric: 120}
+              - column: {name: display_order, valueNumeric: 1}
+        - insert:
+            tableName: stats
+            columns:
+              - column: {name: id, valueNumeric: 2}
+              - column: {name: label, value: 'Engineers'}
+              - column: {name: target_value, valueNumeric: 55}
+              - column: {name: display_order, valueNumeric: 2}
+        - insert:
+            tableName: stats
+            columns:
+              - column: {name: id, valueNumeric: 3}
+              - column: {name: label, value: 'Years Experience'}
+              - column: {name: target_value, valueNumeric: 25}
+              - column: {name: display_order, valueNumeric: 3}
+        - insert:
+            tableName: stats
+            columns:
+              - column: {name: id, valueNumeric: 4}
+              - column: {name: label, value: 'Happy Clients'}
+              - column: {name: target_value, valueNumeric: 100}
+              - column: {name: display_order, valueNumeric: 4}
+
+  - changeSet:
+      id: 002-seed-projects
+      author: arjun
+      comment: Seed data - original static site demo projects
+      changes:
+        - insert:
+            tableName: projects
+            columns:
+              - column: {name: id, valueNumeric: 1}
+              - column: {name: image_url, value: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=800&q=80'}
+              - column: {name: title, value: 'Project 1'}
+              - column: {name: display_order, valueNumeric: 1}
+        - insert:
+            tableName: projects
+            columns:
+              - column: {name: id, valueNumeric: 2}
+              - column: {name: image_url, value: 'https://images.unsplash.com/photo-1460317442991-0ec209397118?auto=format&fit=crop&w=800&q=80'}
+              - column: {name: title, value: 'Project 2'}
+              - column: {name: display_order, valueNumeric: 2}
+        - insert:
+            tableName: projects
+            columns:
+              - column: {name: id, valueNumeric: 3}
+              - column: {name: image_url, value: 'https://images.unsplash.com/photo-1511818966892-d7d671e672a2?auto=format&fit=crop&w=800&q=80'}
+              - column: {name: title, value: 'Project 3'}
+              - column: {name: display_order, valueNumeric: 3}
+
+  - changeSet:
+      id: 002-seed-testimonials
+      author: arjun
+      comment: Seed data - original static site testimonials
+      changes:
+        - insert:
+            tableName: testimonials
+            columns:
+              - column: {name: id, valueNumeric: 1}
+              - column: {name: client_name, value: 'David'}
+              - column: {name: message, value: 'Excellent workmanship and completed our home before deadline.'}
+              - column: {name: rating, valueNumeric: 5}
+              - column: {name: display_order, valueNumeric: 1}
+        - insert:
+            tableName: testimonials
+            columns:
+              - column: {name: id, valueNumeric: 2}
+              - column: {name: client_name, value: 'Jennifer'}
+              - column: {name: message, value: 'Professional engineers and outstanding quality.'}
+              - column: {name: rating, valueNumeric: 5}
+              - column: {name: display_order, valueNumeric: 2}
+        - insert:
+            tableName: testimonials
+            columns:
+              - column: {name: id, valueNumeric: 3}
+              - column: {name: client_name, value: 'Michael'}
+              - column: {name: message, value: 'Highly recommended construction company.'}
+              - column: {name: rating, valueNumeric: 5}
+              - column: {name: display_order, valueNumeric: 3}
+
+  - changeSet:
+      id: 002-seed-company_info
+      author: arjun
+      comment: Seed data - placeholder company info row
+      changes:
+        - insert:
+            tableName: company_info
+            columns:
+              - column: {name: id, valueNumeric: 1}
+              - column: {name: company_name, value: 'BuildPro Construction'}
+              - column: {name: address, value: '123 Business Street'}
+              - column: {name: phone, value: '+91 9876543210'}
+              - column: {name: email, value: 'info@buildpro.com'}
+
+  - changeSet:
+      id: 002-seed-bump-sequences
+      author: arjun
+      comment: Keep each table's id sequence ahead of the explicit ids inserted above, so the next app-generated insert doesn't collide with seed rows
+      changes:
+        - sql:
+            sql: >
+              SELECT setval(pg_get_serial_sequence('services', 'id'), COALESCE((SELECT MAX(id) FROM services), 1));
+              SELECT setval(pg_get_serial_sequence('stats', 'id'), COALESCE((SELECT MAX(id) FROM stats), 1));
+              SELECT setval(pg_get_serial_sequence('projects', 'id'), COALESCE((SELECT MAX(id) FROM projects), 1));
+              SELECT setval(pg_get_serial_sequence('testimonials', 'id'), COALESCE((SELECT MAX(id) FROM testimonials), 1));
+              SELECT setval(pg_get_serial_sequence('company_info', 'id'), COALESCE((SELECT MAX(id) FROM company_info), 1));

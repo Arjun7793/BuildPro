@@ -5,6 +5,51 @@ All notable changes to this project are documented here.
 ## [Unreleased]
 
 ### Added
+- Added Liquibase for schema migrations, replacing the old "run this ALTER
+  TABLE by hand before deploying" pattern used for the project image upload
+  columns. Changesets live under `src/main/resources/db/changelog/`
+  (`db.changelog-master.yaml` includes `changes/001-baseline-schema.yaml`);
+  `ddl-auto` stays `validate` in both profiles, so Hibernate still checks the
+  JPA mappings match, but Liquibase is what actually owns the schema now. Both
+  the local and Railway databases (previously unmanaged - this app never had
+  a migration tool before) were wiped (`DROP SCHEMA public CASCADE` /
+  `CREATE SCHEMA public` - see README's "Database migrations (Liquibase)"
+  section) so changeset 001 creates all 6 tables for real rather than being
+  baselined over an existing schema; **this deleted all data that was in
+  either database**, which was fine since neither had anything worth keeping
+  yet. From here on, any schema change is a new changeset file, not raw SQL
+  run by hand.
+- Moved seed data out of `data.sql`/`spring.sql.init` entirely and into a
+  second Liquibase changeset, `002-seed-data.yaml` (included from
+  `db.changelog-master.yaml` right after the baseline schema one) - `data.sql`
+  is deleted, and the `spring.sql.init` config block is gone from both
+  `application-local.yaml` and `application-prod.yaml`. This was tried first
+  as `data.sql` with `spring.sql.init.mode: always`, but that turned out to
+  have a real gap: `data.sql`'s `ON CONFLICT (id) DO NOTHING` only protects an
+  edited row from being overwritten, not a *deleted* one from being silently
+  recreated on the next restart (delete it -> no more conflict -> `data.sql`
+  just re-inserts it next time it runs). A Liquibase changeset has no such gap
+  - like every other changeset, it's tracked in `DATABASECHANGELOG` and runs
+  exactly once ever per database, so a deleted seed row stays deleted. Also
+  kept the comment on the seed `projects` rows noting that `image_data`/
+  `image_content_type` are deliberately left NULL there - those seed rows use
+  an external `image_url` rather than an uploaded file, which is one of the
+  two valid ways `ProjectItem` supports an image.
+
+### Fixed
+- App failed to start after adding Liquibase
+  (`BeanCreationException: ... Circular depends-on relationship between
+  'liquibase' and 'entityManagerFactory'`). Cause: `application-local.yaml`
+  had `spring.jpa.defer-datasource-initialization: true` left over from
+  before Liquibase existed (it makes the `data.sql` loader depend on
+  `entityManagerFactory`, so `data.sql` could build on schema Hibernate
+  itself created); combined with the new `sql.init.mode: always`, that added
+  a `data.sql` loader -> `entityManagerFactory` dependency on top of
+  Liquibase's own `entityManagerFactory` -> `liquibase` dependency, which
+  Spring resolved into a cycle. Removed `defer-datasource-initialization` -
+  Liquibase already guarantees it runs before both `entityManagerFactory`
+  and `data.sql` on its own, so nothing was actually relying on that flag
+  anymore.
 - The public site's page title, header logo, and footer credit were hardcoded
   to "BuildPro"/"BuildPro Construction" - there was no way to change the site's
   actual name from the admin area, even though a "Company name" field already

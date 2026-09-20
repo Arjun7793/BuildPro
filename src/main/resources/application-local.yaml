@@ -15,9 +15,5 @@ spring:
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
-      ddl-auto: validate #update
+      ddl-auto: validate
     show-sql: true
-    defer-datasource-initialization: true
-  sql:
-    init:
-      mode: never #always
