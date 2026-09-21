@@ -547,6 +547,34 @@ All notable changes to this project are documented here.
   branch that reads `.checked` instead. Home/Cover, About Us, and Company
   Info are singletons with no draft concept and are unaffected.
 
+### Added
+- Icons on the public site's Services cards: previously just a title and a
+  paragraph, which read as flat and generic. Since `ServiceItem` has no icon
+  field (services are free-text, admin-editable), `index.html` now picks one
+  of six hand-drawn inline SVGs (house, office building, paint roller,
+  hammer, drafting-triangle, clipboard-check) by matching keywords against
+  the service's title client-side, falling back to a generic tools icon for
+  anything that matches none of them - so every service gets an icon,
+  including ones an admin adds later with a title none of the rules expect.
+  No icon font or external asset added; the SVGs are inlined the same way
+  the rest of this page is self-contained.
+
+### Fixed
+- The `admin/content.html` drag-to-reorder handle (the "::" in the first
+  column) did nothing on mobile. Root cause: reordering is built on the
+  native HTML5 Drag and Drop API (`draggable="true"` + `dragstart`/
+  `dragover`/`drop`), which has no touch equivalent - mobile Safari and
+  Chrome never fire `dragstart` from a touch gesture, so every listener
+  wired for it was simply dead code on a phone. Added a parallel
+  `touchstart`/`touchmove`/`touchend` implementation scoped to the handle
+  cell only (not the whole row, so normal vertical scrolling elsewhere on
+  the card is unaffected), which tracks the row under the finger via
+  `elementFromPoint` and calls the same `reorderItems()` the desktop path
+  already uses on drop - no duplicated reorder/save logic. Also added
+  `touch-action: none` to the handle so the browser's own scroll/zoom
+  gesture handling doesn't fight `touchmove`'s `preventDefault()`, and
+  enlarged the handle's tap target.
+
 ## [0.3.0] - API + Postgres-backed content
 
 ### Added

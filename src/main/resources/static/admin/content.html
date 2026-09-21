@@ -376,9 +376,15 @@ font-size:14px;
 width:28px;
 color:#bbb;
 cursor:grab;
-font-size:16px;
+font-size:20px;
 text-align:center;
 user-select:none;
+/* Without this, touchmove's preventDefault() (needed so dragging doesn't
+   also scroll the page - see the touch fallback in wireDragAndDrop) fights
+   the browser's own default touch-scroll/zoom gesture handling on this
+   element and can feel laggy or get swallowed on some mobile browsers. */
+touch-action:none;
+padding:10px 0;
 }
 
 tbody tr.draggable-row[draggable="true"]:active .drag-handle{
@@ -1248,6 +1254,59 @@ var targetId = row.getAttribute('data-id');
 if(draggedId === targetId) return;
 reorderItems(section, draggedId, targetId);
 });
+
+// Touch fallback: the HTML5 drag-and-drop API wired above (dragstart/
+// dragover/drop) has no touch equivalent - mobile Safari/Chrome never fire
+// dragstart from a touch gesture, so on a phone the ":: " handle above just
+// sits there doing nothing. Reimplement the same start -> hover-highlight ->
+// drop sequence by hand with touch events, scoped to the handle cell only
+// (not the whole row) so a normal vertical scroll everywhere else on the
+// card still works, and call the same reorderItems() the desktop path uses.
+var handleEl = row.querySelector('.drag-handle');
+if(!handleEl) return;
+var touchTargetRow = null;
+
+handleEl.addEventListener('touchstart', function(){
+dragState = {section: section, id: row.getAttribute('data-id')};
+row.classList.add('dragging');
+touchTargetRow = null;
+}, {passive: true});
+
+handleEl.addEventListener('touchmove', function(e){
+if(!dragState || dragState.section !== section) return;
+// Prevent the page/table from scrolling while a reorder drag is in
+// progress - this is exactly why the listener has to be non-passive.
+e.preventDefault();
+var touch = e.touches[0];
+var el = document.elementFromPoint(touch.clientX, touch.clientY);
+var target = el && el.closest ? el.closest('tr.draggable-row') : null;
+if(target && target.parentNode !== tbody) target = null;
+if(touchTargetRow && touchTargetRow !== target){
+touchTargetRow.classList.remove('drag-over');
+touchTargetRow = null;
+}
+if(target && target !== row){
+target.classList.add('drag-over');
+touchTargetRow = target;
+}
+}, {passive: false});
+
+function endTouchDrag(){
+row.classList.remove('dragging');
+if(touchTargetRow) touchTargetRow.classList.remove('drag-over');
+if(dragState && dragState.section === section && touchTargetRow){
+var draggedId = dragState.id;
+var targetId = touchTargetRow.getAttribute('data-id');
+if(draggedId !== targetId){
+reorderItems(section, draggedId, targetId);
+}
+}
+dragState = null;
+touchTargetRow = null;
+}
+
+handleEl.addEventListener('touchend', endTouchDrag);
+handleEl.addEventListener('touchcancel', endTouchDrag);
 });
 }
 

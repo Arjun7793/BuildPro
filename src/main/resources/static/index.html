@@ -247,6 +247,28 @@ transition:.3s;
 transform:translateY(-10px);
 }
 
+.card-icon{
+width:52px;
+height:52px;
+border-radius:50%;
+background:rgba(255,152,0,.12);
+display:flex;
+align-items:center;
+justify-content:center;
+margin-bottom:16px;
+color:#ff9800;
+}
+
+.card-icon svg{
+width:26px;
+height:26px;
+stroke:currentColor;
+fill:none;
+stroke-width:1.8;
+stroke-linecap:round;
+stroke-linejoin:round;
+}
+
 .card h3{
 margin-bottom:15px;
 color:#ff9800;
@@ -612,10 +634,40 @@ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m];
 });
 }
 
+// Services are free-text (admin-editable title/description, no icon field
+// on the entity), so icons are picked by matching keywords in the title
+// against a small set of hand-drawn inline SVGs - no icon font/library
+// dependency added, consistent with the rest of this page. Anything that
+// doesn't match a keyword falls back to a generic tools icon rather than
+// showing no icon at all.
+var SERVICE_ICON_HOUSE = '<svg viewBox="0 0 24 24"><path d="M3 11.5L12 4l9 7.5"/><path d="M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9"/></svg>';
+var SERVICE_ICON_BUILDING = '<svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="1"/><path d="M9 21v-4h6v4M8 7h2M14 7h2M8 11h2M14 11h2M8 15h2M14 15h2"/></svg>';
+var SERVICE_ICON_PALETTE = '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="12" height="6" rx="1"/><path d="M9 10v4a2 2 0 0 0 2 2h1a2 2 0 0 1 2 2v3"/></svg>';
+var SERVICE_ICON_HAMMER = '<svg viewBox="0 0 24 24"><path d="M14 7l3-3 4 4-3 3"/><path d="M13.5 7.5L4 17a1.5 1.5 0 0 0 0 2l.5.5a1.5 1.5 0 0 0 2 0L16 10"/></svg>';
+var SERVICE_ICON_ARCHITECTURE = '<svg viewBox="0 0 24 24"><path d="M12 3l9 18H3z"/><path d="M9 15h6M12 3v6"/></svg>';
+var SERVICE_ICON_CLIPBOARD = '<svg viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4h6a1 1 0 0 1 1 1v1H8V5a1 1 0 0 1 1-1z"/><path d="M9 13l2 2 4-4"/></svg>';
+var SERVICE_ICON_DEFAULT = '<svg viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.8 2.8-2-2z"/></svg>';
+
+var SERVICE_ICON_RULES = [
+{re: /interior|design/i, svg: SERVICE_ICON_PALETTE},
+{re: /renovat|remodel/i, svg: SERVICE_ICON_HAMMER},
+{re: /architect/i, svg: SERVICE_ICON_ARCHITECTURE},
+{re: /project|management|planning/i, svg: SERVICE_ICON_CLIPBOARD},
+{re: /commercial|office|mall|shop/i, svg: SERVICE_ICON_BUILDING},
+{re: /residen|home|villa|apartment|house/i, svg: SERVICE_ICON_HOUSE}
+];
+
+function getServiceIcon(title){
+for(var i = 0; i < SERVICE_ICON_RULES.length; i++){
+if(SERVICE_ICON_RULES[i].re.test(title || '')) return SERVICE_ICON_RULES[i].svg;
+}
+return SERVICE_ICON_DEFAULT;
+}
+
 function renderServices(services){
 var container = document.getElementById('services-container');
 container.innerHTML = (services || []).map(function(s){
-return '<div class="card"><h3>' + escapeHtml(s.title) + '</h3><p>' + escapeHtml(s.description) + '</p></div>';
+return '<div class="card"><div class="card-icon">' + getServiceIcon(s.title) + '</div><h3>' + escapeHtml(s.title) + '</h3><p>' + escapeHtml(s.description) + '</p></div>';
 }).join('');
 }
 
