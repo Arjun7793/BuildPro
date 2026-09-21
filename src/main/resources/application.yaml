@@ -32,8 +32,8 @@ spring:
   mail:
     host: ${MAIL_HOST:smtp.gmail.com}
     port: ${MAIL_PORT:587}
-    username: ${MAIL_USERNAME:tarjun025@gmail.com}
-    password: ${MAIL_PASSWORD:znxd tcxv iqsc gsfy}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
     properties:
       mail:
         smtp:
@@ -87,7 +87,7 @@ app:
   # (bad credentials, SMTP down) is only logged - it never fails the contact form
   # submission itself, since the lead is already saved in Postgres by then.
   lead-notifications:
-    enabled: ${LEAD_NOTIFICATIONS_ENABLED:true}
+    enabled: ${LEAD_NOTIFICATIONS_ENABLED:false}
     to: ${LEAD_NOTIFICATION_EMAIL:}
     from: ${MAIL_FROM:${spring.mail.username:}}
 
