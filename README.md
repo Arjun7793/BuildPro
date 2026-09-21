@@ -218,6 +218,51 @@ var, defaulting to `Asia/Kolkata`) — fetched at page load from `GET /api/confi
 hardcoded in the page itself. Submission times are stored on the server in UTC (the
 JVM's clock on Railway), so this only affects how they're *displayed*.
 
+## Lead notifications
+
+New submissions to the contact form (`POST /api/leads`) can trigger an email so
+you don't have to keep checking `/admin/leads` manually — see
+`service/impl/LeadNotificationServiceImpl.java`. Off by default; enable it with:
+
+| Env var | Required | Default | Purpose |
+| --- | --- | --- | --- |
+| `LEAD_NOTIFICATIONS_ENABLED` | to turn it on | `false` | Set to `true` to actually send emails. |
+| `LEAD_NOTIFICATION_EMAIL` | no | *(none)* | Recipient override - see "Who receives it" below. |
+| `MAIL_USERNAME` | when enabled | *(none)* | The sending account's full email address. |
+| `MAIL_PASSWORD` | when enabled | *(none)* | An **app password**, not the account's normal login password (see below for Gmail). |
+| `MAIL_HOST` | no | `smtp.gmail.com` | SMTP host. |
+| `MAIL_PORT` | no | `587` | SMTP port (STARTTLS). |
+| `MAIL_FROM` | no | `MAIL_USERNAME`'s value | Override the `From:` address shown to the recipient. |
+
+**Who receives it:** if `LEAD_NOTIFICATION_EMAIL` is set, that address always
+wins. Otherwise it falls back to the **Company Info** section's `email` field —
+the same address shown in the site's footer/contact section, editable via
+`/admin/content` → Company Info, with no redeploy needed to change it. If
+neither is set, notifications are skipped (and logged as such) until one is.
+
+**Setting up a Gmail app password** (simplest option for this volume of email):
+
+1. On the Gmail account that will send the notifications, turn on 2-Step
+   Verification if it isn't already (Google Account → Security).
+2. Google Account → Security → "2-Step Verification" → "App passwords".
+3. Create one (any name, e.g. "BuildPro leads") and copy the 16-character
+   password it generates — that's `MAIL_PASSWORD`, not the account's real
+   password.
+4. Set `MAIL_USERNAME` to the full Gmail address and `LEAD_NOTIFICATIONS_ENABLED=true`.
+   Leave `LEAD_NOTIFICATION_EMAIL` unset to have notifications go to whatever
+   email is set in Company Info, or set it explicitly to send them somewhere
+   different from that public-facing address.
+
+Any other SMTP provider (SendGrid, Resend, Mailgun, etc.) works the same way —
+just point `MAIL_HOST`/`MAIL_PORT`/`MAIL_USERNAME`/`MAIL_PASSWORD` at that
+provider's SMTP credentials instead.
+
+A failed send (wrong credentials, SMTP provider temporarily down, no recipient
+resolved) is only logged server-side — it never fails the contact form
+submission itself, since the lead is already saved in Postgres before the
+email is attempted. Check the app logs if you enable this and don't see
+emails arriving.
+
 ## Deployment
 
 The app is deployed on [Railway](https://railway.app), running the `prod` profile

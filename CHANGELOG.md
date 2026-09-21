@@ -489,6 +489,35 @@ All notable changes to this project are documented here.
 - Redesigned `/admin/login` — previously a bare, unstyled username/password
   form. Now matches the visual polish of the rest of the admin area.
 
+### Added
+- Email notification on new leads: `POST /api/leads` (the public contact form)
+  now triggers an email via `LeadNotificationServiceImpl`, so new submissions
+  don't require manually polling `/admin/leads`. Off by default
+  (`app.lead-notifications.enabled` / `LEAD_NOTIFICATIONS_ENABLED`, defaulting
+  to `false`) so a fresh local checkout with no SMTP configured never tries to
+  send mail. Recipient resolution: `LEAD_NOTIFICATION_EMAIL`, when set, always
+  wins (an explicit override); otherwise it falls back to the singleton
+  `CompanyInfo.email` field - the same address already shown in the site's
+  footer/contact section and editable via `/admin/content` -> Company Info -
+  looked up fresh on every send (not cached), so editing it in the admin panel
+  takes effect immediately with no redeploy. Standard `MAIL_HOST`/`MAIL_PORT`/
+  `MAIL_USERNAME`/`MAIL_PASSWORD`/`MAIL_FROM` env vars configure the SMTP side
+  (defaults target Gmail's SMTP relay with an app password - see README's new
+  "Lead notifications" section for the full setup). Sending happens inside
+  `LeadServiceImpl.create()`, right after the lead is saved; a failed send
+  (bad credentials, SMTP outage, no recipient resolved) is only logged and
+  never propagates back up, since the contact form submission itself already
+  succeeded by that point - a notification problem must never turn into a
+  broken experience for the site visitor who just submitted the form.
+  Required adding `spring-boot-starter-mail` to `build.gradle` and a
+  `spring.mail.*` block to `application.yaml` - folded into the existing
+  top-level `spring:` block rather than a second one (a second top-level
+  `spring:` key in the same YAML file is a silent bug: YAML doesn't merge
+  duplicate keys, so whichever block "wins" per the parser would have quietly
+  dropped every setting in the other one - `spring.application.name`,
+  `profiles.active`, `data.web.pageable`, `jpa.*`, and `servlet.multipart.*`
+  in this case. Caught and fixed before it ever ran).
+
 ## [0.3.0] - API + Postgres-backed content
 
 ### Added

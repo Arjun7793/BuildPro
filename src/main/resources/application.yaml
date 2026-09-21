@@ -22,6 +22,24 @@ spring:
       # this into a clean 413 ApiError instead of a generic 500.
       max-file-size: 5MB
       max-request-size: 5MB
+  # SMTP settings for the new-lead notification emails (see app.lead-notifications
+  # below and service/impl/LeadNotificationServiceImpl.java). Defaults target
+  # Gmail's SMTP relay - MAIL_USERNAME is the full Gmail address, MAIL_PASSWORD is
+  # a Gmail *app password* (Google Account -> Security -> 2-Step Verification ->
+  # App passwords), not the account's normal login password. Any other SMTP
+  # provider (SendGrid, Resend, etc.) works too - just override MAIL_HOST/
+  # MAIL_PORT along with the username/password.
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:tarjun025@gmail.com}
+    password: ${MAIL_PASSWORD:znxd tcxv iqsc gsfy}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
 
 server:
   port: 8080
@@ -62,3 +80,14 @@ app:
   leads-rate-limit:
     max-requests: ${LEADS_RATE_LIMIT_MAX_REQUESTS:5}
     window-minutes: ${LEADS_RATE_LIMIT_WINDOW_MINUTES:10}
+  # New-lead email notifications (see service/impl/LeadNotificationServiceImpl.java) -
+  # off by default so local dev never tries to send mail with no SMTP configured.
+  # Enable in prod via LEAD_NOTIFICATIONS_ENABLED=true, alongside the spring.mail.*
+  # env vars below and LEAD_NOTIFICATION_EMAIL (who receives them). A failed send
+  # (bad credentials, SMTP down) is only logged - it never fails the contact form
+  # submission itself, since the lead is already saved in Postgres by then.
+  lead-notifications:
+    enabled: ${LEAD_NOTIFICATIONS_ENABLED:true}
+    to: ${LEAD_NOTIFICATION_EMAIL:}
+    from: ${MAIL_FROM:${spring.mail.username:}}
+

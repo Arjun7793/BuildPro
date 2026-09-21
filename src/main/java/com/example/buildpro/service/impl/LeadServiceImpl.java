@@ -4,6 +4,7 @@ import com.example.buildpro.dto.LeadStats;
 import com.example.buildpro.entity.Lead;
 import com.example.buildpro.repository.LeadRepository;
 import com.example.buildpro.repository.LeadSpecifications;
+import com.example.buildpro.service.LeadNotificationService;
 import com.example.buildpro.service.LeadService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -25,6 +26,7 @@ import java.util.Optional;
 public class LeadServiceImpl implements LeadService {
 
     private final LeadRepository leadRepository;
+    private final LeadNotificationService leadNotificationService;
 
     @Override
     public Page<Lead> search(String name, LocalDate from, LocalDate to, Pageable pageable) {
@@ -62,7 +64,12 @@ public class LeadServiceImpl implements LeadService {
     public Lead create(Lead lead) {
         lead.setId(null);
         lead.setCreatedAt(null);
-        return leadRepository.save(lead);
+        Lead saved = leadRepository.save(lead);
+        // Best-effort - see LeadNotificationServiceImpl for why a notification
+        // failure never propagates back up to fail this (already-successful)
+        // contact form submission.
+        leadNotificationService.notifyNewLead(saved);
+        return saved;
     }
 
     @Override
