@@ -1,0 +1,67 @@
+databaseChangeLog:
+  # Adds a draft/published staging flag to services, projects, testimonials, and
+  # stats (see the identical `published` field added to ServiceItem/ProjectItem/
+  # Testimonial/Stat, and the filtering added to SiteContentServiceImpl.getContent()
+  # for the public /api/content payload). NOT NULL with a true default so every
+  # existing row becomes "published" - the site's visible content is unchanged
+  # by this migration; nothing that was live before goes dark after it runs.
+
+  - changeSet:
+      id: 005-services-published
+      author: arjun
+      comment: Add published (draft/published staging flag) to services, defaulting existing rows to true
+      changes:
+        - addColumn:
+            tableName: services
+            columns:
+              - column:
+                  name: published
+                  type: BOOLEAN
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+
+  - changeSet:
+      id: 005-projects-published
+      author: arjun
+      comment: Add published (draft/published staging flag) to projects, defaulting existing rows to true
+      changes:
+        - addColumn:
+            tableName: projects
+            columns:
+              - column:
+                  name: published
+                  type: BOOLEAN
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+
+  - changeSet:
+      id: 005-testimonials-published
+      author: arjun
+      comment: Add published (draft/published staging flag) to testimonials, defaulting existing rows to true
+      changes:
+        - addColumn:
+            tableName: testimonials
+            columns:
+              - column:
+                  name: published
+                  type: BOOLEAN
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+
+  - changeSet:
+      id: 005-stats-published
+      author: arjun
+      comment: Add published (draft/published staging flag) to stats, defaulting existing rows to true
+      changes:
+        - addColumn:
+            tableName: stats
+            columns:
+              - column:
+                  name: published
+                  type: BOOLEAN
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false

@@ -36,6 +36,7 @@ public class ServiceItemServiceImpl implements ServiceItemService {
             existing.setTitle(update.getTitle());
             existing.setDescription(update.getDescription());
             existing.setDisplayOrder(update.getDisplayOrder());
+            existing.setPublished(update.getPublished());
             return serviceItemRepository.save(existing);
         });
     }

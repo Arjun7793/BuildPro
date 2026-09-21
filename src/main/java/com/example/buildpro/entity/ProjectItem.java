@@ -3,6 +3,7 @@ package com.example.buildpro.entity;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -47,4 +48,11 @@ public class ProjectItem {
 
     @Column(name = "image_content_type")
     private String imageContentType;
+
+    // Draft/published staging flag - see the identical field on ServiceItem
+    // for the full explanation (filtering, default, and why @NotNull rather
+    // than nullable).
+    @NotNull(message = "published is required")
+    @Column(nullable = false)
+    private Boolean published = Boolean.TRUE;
 }

@@ -36,6 +36,7 @@ public class StatServiceImpl implements StatService {
             existing.setLabel(update.getLabel());
             existing.setTargetValue(update.getTargetValue());
             existing.setDisplayOrder(update.getDisplayOrder());
+            existing.setPublished(update.getPublished());
             return statRepository.save(existing);
         });
     }

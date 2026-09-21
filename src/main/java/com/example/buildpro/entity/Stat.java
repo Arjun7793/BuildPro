@@ -28,4 +28,13 @@ public class Stat {
 
     @Column(name = "display_order")
     private Integer displayOrder;
+
+    // Same draft/published convention as ServiceItem/ProjectItem/Testimonial:
+    // defaults true so every existing row stays live after the migration,
+    // filtered only at SiteContentServiceImpl's /api/content aggregation, and
+    // @NotNull so an explicit null from a client 400s cleanly instead of
+    // hitting the DB's NOT NULL constraint.
+    @NotNull(message = "published is required")
+    @Column(nullable = false)
+    private Boolean published = Boolean.TRUE;
 }

@@ -11,3 +11,6 @@ databaseChangeLog:
   - include:
       file: db/changelog/changes/004-hero-about-image-upload.yaml
       relativeToChangelogFile: false
+  - include:
+      file: db/changelog/changes/005-draft-published-flag.yaml
+      relativeToChangelogFile: false

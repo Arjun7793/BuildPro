@@ -518,6 +518,35 @@ All notable changes to this project are documented here.
   `profiles.active`, `data.web.pageable`, `jpa.*`, and `servlet.multipart.*`
   in this case. Caught and fixed before it ever ran).
 
+- Draft/published flag on services, stats, projects, and testimonials: each
+  now has a `published` boolean (`@NotNull`, `Column(nullable = false)`,
+  defaulting to `true` so every existing row stays live after the
+  migration). The flag is saved and fully editable through the normal admin
+  CRUD endpoints either way - a draft is not hidden from the admin panel,
+  only from the public site. Filtering happens in exactly one place,
+  `SiteContentServiceImpl` (the `/api/content` aggregation the public
+  homepage actually fetches from) via a new `onlyPublished()` helper; the
+  raw `/api/services`, `/api/stats`, `/api/projects`, and `/api/testimonials`
+  endpoints keep returning every row, drafts included, since
+  `/admin/content`'s table view depends on seeing (and being able to
+  republish) unpublished items. Liquibase changeset
+  `005-draft-published-flag.yaml` adds the column to all four tables with
+  `defaultValueBoolean: true` so it backfills cleanly without a manual
+  UPDATE (stats was added to the same changeset in a follow-up, before it
+  was ever applied to a database, rather than a separate 006 file). In
+  `/admin/content`: a new "Status" column renders a Published/Draft badge, a
+  quick Publish/Unpublish button sits next to Edit/Delete on each row (sends
+  the full item object with only `published` flipped, same convention as
+  the existing drag-reorder `displayOrder` PUT - the generic update
+  endpoints overwrite every field from the request body, so a partial
+  payload would silently null out the rest), and the edit form gained a
+  Published checkbox (new items default checked). Caught one bug before it
+  shipped: the existing generic form-submit handler read every field's
+  value via `.value`, which for a checkbox is always its static `value`
+  attribute regardless of whether it's checked - added an explicit checkbox
+  branch that reads `.checked` instead. Home/Cover, About Us, and Company
+  Info are singletons with no draft concept and are unaffected.
+
 ## [0.3.0] - API + Postgres-backed content
 
 ### Added

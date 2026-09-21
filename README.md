@@ -157,14 +157,23 @@ account:
   company info. Each section is a table with an "+ Add" button; editing opens a
   small form in a modal, which shows field-specific validation errors (e.g. "title
   is required" under the Title field) instead of only a generic failure message.
-  Changes go live immediately, since the public page reads the same data via
-  `/api/content`.
+  Changes go live immediately once published, since the public page reads the same
+  data via `/api/content`.
   - Home/Cover and About Us (like Company info) are singletons: there's always
     exactly one row, so their table only offers Edit — no "+ Add" or Delete.
   - Services, stats, projects, and testimonials support drag-to-reorder: drag a row
     by its handle to change `displayOrder` instead of typing a number. Only the
     rows whose order actually changed are saved (existing `PUT {path}/{id}`, no new
     endpoint); new items are appended to the end automatically.
+  - Services, stats, projects, and testimonials also have a **Published**/**Draft**
+    flag (`published` on the entity, defaulting to `true` so nothing already live
+    goes dark). A draft is saved and fully editable in the admin panel like any
+    other item, but is filtered out of `/api/content` — the endpoint the public
+    page actually fetches from — so it stays invisible on the live site until you
+    flip it back to Published. Toggle it from the checkbox in the edit form, or
+    the quick Publish/Unpublish button next to each row. (Home/Cover, About Us,
+    and Company Info are singletons with no draft concept — they're either
+    configured or they aren't.)
   - Projects, Home/Cover's background image, and About Us's image all have the same
     hybrid image upload option: the Image field takes either a pasted URL or a
     picked file. An uploaded file is sent to `POST {path}/{id}/image` (multipart,

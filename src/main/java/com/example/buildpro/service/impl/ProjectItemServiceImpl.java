@@ -36,6 +36,7 @@ public class ProjectItemServiceImpl implements ProjectItemService {
             existing.setImageUrl(update.getImageUrl());
             existing.setTitle(update.getTitle());
             existing.setDisplayOrder(update.getDisplayOrder());
+            existing.setPublished(update.getPublished());
 
             // If the incoming imageUrl isn't this project's own upload endpoint,
             // the admin is pointing it at an external URL (or clearing it) - drop

@@ -2,6 +2,7 @@ package com.example.buildpro.entity;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -28,4 +29,11 @@ public class Testimonial {
 
     @Column(name = "display_order")
     private Integer displayOrder;
+
+    // Draft/published staging flag - see the identical field on ServiceItem
+    // for the full explanation (filtering, default, and why @NotNull rather
+    // than nullable).
+    @NotNull(message = "published is required")
+    @Column(nullable = false)
+    private Boolean published = Boolean.TRUE;
 }

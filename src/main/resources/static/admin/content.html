@@ -312,6 +312,25 @@ white-space:normal;
 word-break:break-word;
 }
 
+.status-badge{
+display:inline-block;
+padding:4px 10px;
+border-radius:20px;
+font-size:12px;
+font-weight:600;
+white-space:nowrap;
+}
+
+.status-published{
+background:#eafaf0;
+color:#1e7e4f;
+}
+
+.status-draft{
+background:#fff4e0;
+color:#9a6300;
+}
+
 .row-actions{
 display:flex;
 gap:8px;
@@ -541,6 +560,25 @@ border:1px solid #ccc;
 border-radius:5px;
 font-size:14px;
 font-family:'Poppins',sans-serif;
+}
+
+/* A checkbox field (e.g. Published) doesn't want the block-label-above-input
+   layout every other field type uses, or the full-width/padded input styling
+   above (which would otherwise stretch a checkbox into a giant padded box) -
+   label and checkbox sit inline instead. */
+.field-checkbox label{
+display:flex;
+align-items:center;
+gap:10px;
+margin-bottom:0;
+cursor:pointer;
+}
+
+.field-checkbox input{
+width:auto;
+padding:0;
+margin:0;
+accent-color:#ffb400;
 }
 
 .field textarea{
@@ -824,14 +862,22 @@ var SECTIONS = [
     path: '/api/services',
     singular: 'service',
     sortable: true,
+    // Lets a service be saved and staged before it's shown on the public site -
+    // see the `published` field on the ServiceItem entity and the filtering in
+    // SiteContentServiceImpl. The quick Publish/Unpublish button below the
+    // table is a shortcut for the same checkbox in the edit form.
+    togglePublish: true,
     columns: [
       {key:'title', label:'Title'},
       {key:'description', label:'Description', text:true},
-      {key:'displayOrder', label:'Order'}
+      {key:'displayOrder', label:'Order'},
+      {key:'published', label:'Status', status:true}
     ],
     fields: [
       {name:'title', label:'Title', type:'text', required:true},
-      {name:'description', label:'Description', type:'textarea'}
+      {name:'description', label:'Description', type:'textarea'},
+      {name:'published', label:'Published', type:'checkbox', default:true,
+        hint:'Unchecked items are saved but hidden from the public site until published.'}
     ]
   },
   {
@@ -840,14 +886,19 @@ var SECTIONS = [
     path: '/api/stats',
     singular: 'stat',
     sortable: true,
+    // See the identical comment on the services section above.
+    togglePublish: true,
     columns: [
       {key:'label', label:'Label'},
       {key:'targetValue', label:'Value'},
-      {key:'displayOrder', label:'Order'}
+      {key:'displayOrder', label:'Order'},
+      {key:'published', label:'Status', status:true}
     ],
     fields: [
       {name:'label', label:'Label', type:'text', required:true, placeholder:'e.g. Projects Completed'},
-      {name:'targetValue', label:'Value', type:'number', required:true}
+      {name:'targetValue', label:'Value', type:'number', required:true},
+      {name:'published', label:'Published', type:'checkbox', default:true,
+        hint:'Unchecked items are saved but hidden from the public site until published.'}
     ]
   },
   {
@@ -856,10 +907,13 @@ var SECTIONS = [
     path: '/api/projects',
     singular: 'project',
     sortable: true,
+    // See the identical comment on the services section above.
+    togglePublish: true,
     columns: [
       {key:'imageUrl', label:'Image', image:true},
       {key:'title', label:'Title'},
-      {key:'displayOrder', label:'Order'}
+      {key:'displayOrder', label:'Order'},
+      {key:'published', label:'Status', status:true}
     ],
     fields: [
       // Hybrid control (see openModal/handleProjectImageUpload): either paste a
@@ -872,7 +926,9 @@ var SECTIONS = [
       // together (see the image-field check in the submit handler), which a
       // plain HTML `required` attribute on just the text input can't express.
       {name:'imageUrl', label:'Image URL', type:'image', placeholder:'https://...'},
-      {name:'title', label:'Title', type:'text', required:true}
+      {name:'title', label:'Title', type:'text', required:true},
+      {name:'published', label:'Published', type:'checkbox', default:true,
+        hint:'Unchecked items are saved but hidden from the public site until published.'}
     ]
   },
   {
@@ -881,16 +937,21 @@ var SECTIONS = [
     path: '/api/testimonials',
     singular: 'testimonial',
     sortable: true,
+    // See the identical comment on the services section above.
+    togglePublish: true,
     columns: [
       {key:'clientName', label:'Client'},
       {key:'message', label:'Message', text:true},
       {key:'rating', label:'Rating'},
-      {key:'displayOrder', label:'Order'}
+      {key:'displayOrder', label:'Order'},
+      {key:'published', label:'Status', status:true}
     ],
     fields: [
       {name:'clientName', label:'Client name', type:'text', required:true},
       {name:'message', label:'Message', type:'textarea'},
-      {name:'rating', label:'Rating (1-5)', type:'number'}
+      {name:'rating', label:'Rating (1-5)', type:'number'},
+      {name:'published', label:'Published', type:'checkbox', default:true,
+        hint:'Unchecked items are saved but hidden from the public site until published.'}
     ]
   },
   {
@@ -1012,7 +1073,43 @@ var id = delBtn.getAttribute('data-delete');
 deleteItem(section, id, delBtn);
 return;
 }
+var toggleBtn = e.target.closest('[data-toggle-publish]');
+if(toggleBtn){
+var section = SECTIONS.find(function(s){ return s.key === toggleBtn.getAttribute('data-section'); });
+var id = toggleBtn.getAttribute('data-toggle-publish');
+var item = section._items.find(function(i){ return String(i.id) === String(id); });
+togglePublishItem(section, item, toggleBtn);
+return;
+}
 });
+
+// Flips `published` and PUTs the item back whole (same technique as
+// reorderItems' drag-and-drop save) rather than sending just {published:...} -
+// the generic PUT {path}/{id} endpoints read every field off the incoming
+// body (see e.g. ServiceItemServiceImpl.update()), so a partial payload would
+// silently null out this item's title/description/etc. instead of just
+// flipping its status.
+async function togglePublishItem(section, item, btn){
+if(!item) return;
+var updated = Object.assign({}, item, {published: item.published === false});
+btn.disabled = true;
+try{
+var res = await fetch(section.path + '/' + item.id, {
+method: 'PUT',
+credentials: 'same-origin',
+headers: Object.assign({'Content-Type': 'application/json'}, csrfHeaders()),
+body: JSON.stringify(updated)
+});
+if(!res.ok){
+throw new Error('Save failed with status ' + res.status);
+}
+showToast(updated.published ? 'Published.' : 'Unpublished - hidden from the public site.');
+loadSection(section);
+}catch(err){
+showToast('Couldn\'t update status: ' + err.message, true);
+btn.disabled = false;
+}
+}
 
 async function loadSection(section){
 var bodyEl = document.getElementById('body-' + section.key);
@@ -1053,6 +1150,14 @@ return value ? '<img class="thumb" src="' + escapeHtml(value) + '" alt="">' : '&
 if(col.text){
 return '<span class="text-cell" title="' + escapeHtml(value || '') + '">' + (value ? escapeHtml(value) : '&mdash;') + '</span>';
 }
+if(col.status){
+// value === false is the only "draft" case - treat null/undefined the same
+// as true (published) so this degrades gracefully for any item saved before
+// this field existed, rather than mislabeling it as a draft.
+var isPublished = value !== false;
+return '<span class="status-badge ' + (isPublished ? 'status-published' : 'status-draft') + '">' +
+(isPublished ? 'Published' : 'Draft') + '</span>';
+}
 return value === null || value === undefined || value === '' ? '&mdash;' : escapeHtml(value);
 }
 
@@ -1076,9 +1181,16 @@ var dragAttrs = section.sortable ? ' class="draggable-row" draggable="true"' : '
 // now reads it (public site header/footer/title, all four admin pages).
 var deleteBtn = section.singleton ? '' :
 '<button class="icon-btn delete" data-delete="' + item.id + '" data-section="' + section.key + '">Delete</button>';
+// Shortcut for the same "Published" checkbox in the edit form - flips it
+// without opening the modal (see togglePublishItem).
+var isPublished = item.published !== false;
+var toggleBtn = section.togglePublish ?
+'<button class="icon-btn" data-toggle-publish="' + item.id + '" data-section="' + section.key + '">' +
+(isPublished ? 'Unpublish' : 'Publish') + '</button>' : '';
 return '<tr' + dragAttrs + ' data-id="' + item.id + '">' + handleCell + cells +
 '<td data-label="Action"><div class="row-actions">' +
 '<button class="icon-btn" data-edit="' + item.id + '" data-section="' + section.key + '">Edit</button>' +
+toggleBtn +
 deleteBtn +
 '</div></td></tr>';
 }).join('');
@@ -1214,6 +1326,18 @@ currentPreview +
 '</div>';
 }
 
+if(field.type === 'checkbox'){
+// Existing item: use its actual saved value. New item: field.default (falls
+// back to true, i.e. published-by-default, if not specified) - matches
+// ServiceItem/ProjectItem/Testimonial.published's own Java-side default, so
+// a freshly opened "+ Add" form starts checked without a round trip.
+var checked = item ? (value !== false) : (field.default !== false);
+return '<div class="field field-checkbox">' +
+'<label><input type="checkbox" name="' + field.name + '"' + (checked ? ' checked' : '') + '> ' + field.label + '</label>' +
+(field.hint ? '<div class="hint">' + field.hint + '</div>' : '') +
+'</div>';
+}
+
 var input = field.type === 'textarea'
 ? '<textarea name="' + field.name + '"' + (field.required ? ' required' : '') + (field.placeholder ? ' placeholder="' + escapeHtml(field.placeholder) + '"' : '') + '>' + escapeHtml(value) + '</textarea>'
 : '<input type="' + field.type + '" name="' + field.name + '" value="' + escapeHtml(value) + '"' + (field.required ? ' required' : '') + (field.placeholder ? ' placeholder="' + escapeHtml(field.placeholder) + '"' : '') + '>';
@@ -1333,6 +1457,10 @@ return;
 
 var payload = {};
 activeSection.fields.forEach(function(field){
+if(field.type === 'checkbox'){
+payload[field.name] = modalForm.elements[field.name].checked;
+return;
+}
 var raw = modalForm.elements[field.name].value;
 if(field.type === 'number'){
 payload[field.name] = raw === '' ? null : Number(raw);

@@ -37,6 +37,7 @@ public class TestimonialServiceImpl implements TestimonialService {
             existing.setMessage(update.getMessage());
             existing.setRating(update.getRating());
             existing.setDisplayOrder(update.getDisplayOrder());
+            existing.setPublished(update.getPublished());
             return testimonialRepository.save(existing);
         });
     }
