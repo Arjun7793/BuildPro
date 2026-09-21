@@ -316,6 +316,74 @@ font-size:18px;
 font-weight:bold;
 cursor:pointer;
 border-radius:5px;
+display:inline-flex;
+align-items:center;
+justify-content:center;
+gap:10px;
+}
+
+button:disabled{
+opacity:.7;
+cursor:not-allowed;
+}
+
+/* Small rotating ring shown inside the Send Message button while the
+   request is in flight - hidden (display:none, not just opacity) so it
+   takes no space and doesn't shift the button's layout when idle. */
+.btn-spinner{
+display:none;
+width:18px;
+height:18px;
+border:3px solid rgba(0,0,0,.25);
+border-top-color:#222;
+border-radius:50%;
+animation:btn-spinner-spin .7s linear infinite;
+}
+
+button.loading .btn-spinner{
+display:inline-block;
+}
+
+@keyframes btn-spinner-spin{
+to{transform:rotate(360deg);}
+}
+
+/* Success/error banner for the contact form result (see #form-status) -
+   replaces plain colored text with a proper alert box so it's easy to
+   notice, and fades in rather than popping in abruptly. */
+.form-status{
+margin-top:-10px;
+margin-bottom:15px;
+min-height:0;
+}
+
+.form-status:empty{
+margin:0;
+}
+
+.form-status.visible{
+padding:14px 16px;
+border-radius:6px;
+font-size:14px;
+line-height:1.5;
+animation:form-status-fade-in .25s ease;
+}
+
+.form-status.success{
+background:#eafaf0;
+color:#1e7e4f;
+border:1px solid #b7e9cd;
+}
+
+.form-status.error{
+background:#fdecec;
+color:#b3261e;
+border:1px solid #f5c2c0;
+}
+
+@keyframes form-status-fade-in{
+from{opacity:0;transform:translateY(-4px);}
+to{opacity:1;transform:translateY(0);}
 }
 
 footer{
@@ -325,12 +393,6 @@ text-align:center;
 padding:30px;
 }
 
-.form-status{
-margin-top:-10px;
-margin-bottom:15px;
-font-size:14px;
-min-height:18px;
-}
 
 /* ============================================================
    min-width:769px - layer the wider-screen layout back on top:
@@ -525,9 +587,9 @@ is completed with quality, safety and on-time delivery.
 
 <textarea rows="6" name="message" placeholder="Message"></textarea>
 
-<div class="form-status" id="form-status"></div>
+<div class="form-status" id="form-status" role="status" aria-live="polite"></div>
 
-<button type="submit">Send Message</button>
+<button type="submit"><span class="btn-spinner" aria-hidden="true"></span><span class="btn-label">Send Message</span></button>
 
 </form>
 
@@ -720,6 +782,30 @@ setupMobileNav();
 var form = document.getElementById('contact-form');
 var status = document.getElementById('form-status');
 var button = form.querySelector('button');
+var buttonLabel = button.querySelector('.btn-label');
+var originalLabel = buttonLabel.textContent;
+
+// Swaps the button into/out of its spinner state (class toggle rather than
+// overwriting button.textContent, which would otherwise wipe out the
+// .btn-spinner/.btn-label child spans the CSS spinner depends on) and
+// renders the result banner - a proper alert box (see .form-status.success/
+// .error in the styles above) rather than plain colored text, so a visitor
+// notices whether their message actually went through.
+function setSending(isSending){
+button.disabled = isSending;
+button.classList.toggle('loading', isSending);
+buttonLabel.textContent = isSending ? 'Sending...' : originalLabel;
+}
+
+function showStatus(message, isSuccess){
+status.textContent = message;
+status.classList.remove('success', 'error');
+if(message){
+status.classList.add('visible', isSuccess ? 'success' : 'error');
+}else{
+status.classList.remove('visible');
+}
+}
 
 form.addEventListener('submit', async function(e){
 e.preventDefault();
@@ -729,10 +815,8 @@ email: form.email.value,
 phone: form.phone.value,
 message: form.message.value
 };
-var originalText = button.textContent;
-button.disabled = true;
-button.textContent = 'Sending...';
-status.textContent = '';
+setSending(true);
+showStatus('', true);
 try{
 var res = await fetch('/api/leads', {
 method: 'POST',
@@ -740,8 +824,7 @@ headers: {'Content-Type': 'application/json'},
 body: JSON.stringify(payload)
 });
 if(res.ok){
-status.textContent = 'Thanks \u2014 we\'ll be in touch shortly.';
-status.style.color = 'green';
+showStatus('Thanks \u2014 we\'ll be in touch shortly.', true);
 form.reset();
 }else{
 // Show the API's own message when it sends one (e.g. a specific validation
@@ -754,15 +837,12 @@ if(errorBody && errorBody.message){
 friendlyMessage = errorBody.message;
 }
 }catch(_){}
-status.textContent = friendlyMessage;
-status.style.color = 'crimson';
+showStatus(friendlyMessage, false);
 }
 }catch(err){
-status.textContent = 'Something went wrong \u2014 please try again.';
-status.style.color = 'crimson';
+showStatus('Something went wrong \u2014 please try again.', false);
 }finally{
-button.disabled = false;
-button.textContent = originalText;
+setSending(false);
 }
 });
 });
