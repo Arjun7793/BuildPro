@@ -1021,6 +1021,24 @@ function csrfHeaders(){
 return {'X-XSRF-TOKEN': getCookie('XSRF-TOKEN')};
 }
 
+// A bare "Save failed with status 401" told the admin nothing they could
+// act on - 401 here specifically means the session (SecurityConfig's
+// defaultAuthenticationEntryPointFor returns 401, not a redirect, for
+// /api/** so this JS can catch it) expired or was never there, most often
+// because the edit modal - open while picking/uploading an image, say - sat
+// idle past Spring Security's default 30-minute session timeout. Logging
+// back in doesn't require reloading this tab (the session cookie is shared
+// across tabs on the same origin), so the fix is "open /admin/login in
+// another tab", not "start over here" - this tab's in-progress edit,
+// including a picked-but-not-yet-uploaded image file, is left untouched so
+// Save can just be clicked again once signed back in.
+function friendlyErrorMessage(res, errorBody, fallback){
+if(res.status === 401){
+return 'Your admin session has expired. Open /admin/login in another tab, log in again, then click Save here to retry - this won\'t lose what you\'ve entered.';
+}
+return (errorBody && errorBody.message) ? errorBody.message : fallback;
+}
+
 // One consistent success/error toast for every create/update/delete across all
 // five sections, instead of some actions (image upload in particular) leaving
 // the admin guessing whether anything happened.
@@ -1107,7 +1125,9 @@ headers: Object.assign({'Content-Type': 'application/json'}, csrfHeaders()),
 body: JSON.stringify(updated)
 });
 if(!res.ok){
-throw new Error('Save failed with status ' + res.status);
+var errorBody = null;
+try{ errorBody = await res.json(); }catch(_){}
+throw new Error(friendlyErrorMessage(res, errorBody, 'Save failed with status ' + res.status));
 }
 showToast(updated.published ? 'Published.' : 'Unpublished - hidden from the public site.');
 loadSection(section);
@@ -1344,7 +1364,9 @@ headers: Object.assign({'Content-Type': 'application/json'}, csrfHeaders()),
 body: JSON.stringify(item)
 });
 if(!res.ok){
-throw new Error('Save failed with status ' + res.status);
+var errorBody = null;
+try{ errorBody = await res.json(); }catch(_){}
+throw new Error(friendlyErrorMessage(res, errorBody, 'Save failed with status ' + res.status));
 }
 }
 if(changed.length > 0){
@@ -1497,8 +1519,7 @@ body: formData
 if(!res.ok){
 var errorBody = null;
 try{ errorBody = await res.json(); }catch(_){}
-var message = (errorBody && errorBody.message) ? errorBody.message : ('Image upload failed with status ' + res.status);
-throw new Error(message);
+throw new Error(friendlyErrorMessage(res, errorBody, 'Image upload failed with status ' + res.status));
 }
 return await res.json();
 }
@@ -1563,8 +1584,7 @@ try{ errorBody = await res.json(); }catch(_){}
 if(errorBody && errorBody.fieldErrors){
 applyFieldErrors(errorBody.fieldErrors);
 }
-var message = (errorBody && errorBody.message) ? errorBody.message : ('Save failed with status ' + res.status);
-throw new Error(message);
+throw new Error(friendlyErrorMessage(res, errorBody, 'Save failed with status ' + res.status));
 }
 var savedItem = await res.json();
 await handleImageUploadIfNeeded(activeSection, savedItem);

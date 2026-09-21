@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>What Our Clients Say</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+
+/* See the identical comment at the top of projects.html - same
+   self-contained-page approach as the rest of this site, header/nav/footer
+   copied verbatim from index.html. */
+
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+font-family:'Poppins',sans-serif;
+scroll-behavior:smooth;
+}
+
+html,body{
+overflow-x:hidden;
+}
+
+body{
+background:#f7f7f7;
+color:#333;
+}
+
+header{
+position:fixed;
+top:0;
+width:100%;
+background:#222;
+padding:12px 5%;
+display:flex;
+justify-content:space-between;
+align-items:center;
+gap:16px;
+/* Higher than nav's z-index (1000) below - header and nav are both
+   position:fixed siblings of the body (not nested), so nav-toggle's own
+   z-index:1002 only wins within HEADER's own stacking context; it does
+   nothing against nav, a sibling with equal z-index that comes later in
+   the DOM and would otherwise paint over the hamburger button (and swallow
+   its clicks) the moment the off-canvas nav panel opens and its background
+   covers that same top-right corner. Keeping header above nav is also just
+   the right order for persistent chrome regardless. */
+z-index:1001;
+}
+
+.logo{
+font-size:clamp(18px,4.5vw,28px);
+font-weight:700;
+color:#ffb400;
+white-space:nowrap;
+overflow:hidden;
+text-overflow:ellipsis;
+max-width:65vw;
+text-decoration:none;
+display:inline-block;
+}
+
+/* Absolute-positioned bars, not a column flex layout - on the fuller pages
+   (index.html especially) flex-direction:column here made each bar's
+   height:3px collapse to 0 (confirmed live: mutating the actual CSS rule
+   had zero effect while flex-direction:column was active, but switching to
+   row or display:block made it apply instantly - a flex column main-axis
+   sizing quirk tied to overall page weight, not to this rule's own values).
+   Absolute positioning is immune to that since these spans are no longer
+   flex items at all; the three top offsets below reproduce the exact
+   positions the old flex layout produced (0, 7.5, 15 - two 3px bars plus
+   two 4.5px gaps from justify-content:space-between over 18px), so the
+   .active transform math further down needs no changes. */
+.nav-toggle{
+position:relative;
+width:24px;
+height:18px;
+background:none;
+border:none;
+padding:0;
+cursor:pointer;
+z-index:1002;
+flex-shrink:0;
+}
+
+.nav-toggle span{
+position:absolute;
+left:0;
+display:block;
+height:3px;
+width:100%;
+background:#fff;
+border-radius:2px;
+transition:.3s;
+}
+
+.nav-toggle span:nth-child(1){top:0;}
+.nav-toggle span:nth-child(2){top:7.5px;}
+.nav-toggle span:nth-child(3){top:15px;}
+
+.nav-toggle.active span:nth-child(1){
+transform:translateY(7.5px) rotate(45deg);
+}
+
+.nav-toggle.active span:nth-child(2){
+opacity:0;
+}
+
+.nav-toggle.active span:nth-child(3){
+transform:translateY(-7.5px) rotate(-45deg);
+}
+
+nav{
+display:flex;
+flex-direction:column;
+align-items:flex-start;
+gap:6px;
+position:fixed;
+top:0;
+right:0;
+height:100vh;
+width:min(78%,300px);
+background:#222;
+padding:90px 30px 30px;
+box-shadow:-10px 0 30px rgba(0,0,0,.3);
+transform:translateX(100%);
+transition:transform .3s ease;
+z-index:1000;
+}
+
+nav.open{
+transform:translateX(0);
+}
+
+nav a{
+text-decoration:none;
+color:white;
+transition:.3s;
+width:100%;
+padding:14px 0;
+border-bottom:1px solid rgba(255,255,255,.12);
+}
+
+nav a:hover{
+color:#ffb400;
+}
+
+.nav-backdrop{
+display:none;
+position:fixed;
+inset:0;
+background:rgba(0,0,0,.5);
+z-index:999;
+}
+
+.nav-backdrop.open{
+display:block;
+}
+
+body.nav-open-lock{
+overflow:hidden;
+}
+
+.page-banner{
+background:#222;
+color:white;
+text-align:center;
+padding:130px 6% 50px;
+}
+
+.page-banner h1{
+font-size:clamp(28px,5vw,44px);
+margin-bottom:10px;
+}
+
+.page-banner p{
+color:#bbb;
+}
+
+.page-banner a{
+color:#ffb400;
+text-decoration:none;
+}
+
+.page-banner a:hover{
+text-decoration:underline;
+}
+
+section{
+padding:60px 6%;
+}
+
+.empty-note{
+text-align:center;
+color:#888;
+padding:40px 0;
+}
+
+.testimonials{
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+gap:20px;
+}
+
+.testimonial{
+background:white;
+padding:22px;
+border-radius:10px;
+box-shadow:0 5px 20px rgba(0,0,0,.08);
+}
+
+footer{
+background:#111;
+color:white;
+text-align:center;
+padding:30px;
+}
+
+@media(min-width:769px){
+
+header{
+padding:18px 8%;
+}
+
+.nav-toggle{
+display:none;
+}
+
+nav{
+position:static;
+height:auto;
+width:auto;
+background:none;
+padding:0;
+box-shadow:none;
+transform:none;
+flex-direction:row;
+gap:0;
+}
+
+nav a{
+width:auto;
+margin-left:30px;
+padding:0;
+border-bottom:none;
+}
+
+section{
+padding:70px 8%;
+}
+
+.testimonials{
+gap:25px;
+}
+
+.testimonial{
+padding:30px;
+}
+
+}
+
+</style>
+
+</head>
+
+<body>
+
+<header>
+
+<a class="logo" id="site-logo" href="index.html" title="Home">BuildPro</a>
+
+<button type="button" class="nav-toggle" id="nav-toggle" aria-label="Toggle menu" aria-expanded="false" aria-controls="site-nav">
+<span></span>
+<span></span>
+<span></span>
+</button>
+
+<nav id="site-nav">
+
+<a href="index.html#home">Home</a>
+<a href="index.html#about">About</a>
+<a href="index.html#services">Services</a>
+<a href="projects.html">Projects</a>
+<a href="index.html#contact">Contact</a>
+
+</nav>
+
+</header>
+
+<div class="nav-backdrop" id="nav-backdrop"></div>
+
+<div class="page-banner">
+
+<h1>What Our Clients Say</h1>
+<p><a href="index.html">Home</a> / Testimonials</p>
+
+</div>
+
+<section>
+
+<div class="testimonials" id="testimonials-container"></div>
+
+</section>
+
+<footer>
+
+&copy; 2026 <span id="footer-company-name">BuildPro Construction</span>. All Rights Reserved.
+
+</footer>
+
+<script>
+
+function escapeHtml(str){
+if(str === undefined || str === null) return '';
+return String(str).replace(/[&<>"']/g, function(m){
+return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m];
+});
+}
+
+function renderTestimonials(testimonials){
+var all = testimonials || [];
+var container = document.getElementById('testimonials-container');
+if(all.length === 0){
+container.innerHTML = '<p class="empty-note">No testimonials yet — check back soon.</p>';
+return;
+}
+container.innerHTML = all.map(function(t){
+var stars = '★'.repeat(t.rating || 5);
+return '<div class="testimonial">' + stars + '<p>' + escapeHtml(t.message) + '</p><br><strong>- ' + escapeHtml(t.clientName) + '</strong></div>';
+}).join('');
+}
+
+function renderCompanyInfo(info){
+if(!info) return;
+var name = (info.companyName || '').trim() || 'BuildPro Construction';
+document.title = 'What Our Clients Say | ' + name;
+var footerNameEl = document.getElementById('footer-company-name');
+if(footerNameEl) footerNameEl.textContent = name;
+var logoEl = document.getElementById('site-logo');
+if(logoEl) logoEl.textContent = name;
+}
+
+async function loadContent(){
+try{
+var res = await fetch('/api/content');
+if(!res.ok) throw new Error('request failed: ' + res.status);
+var data = await res.json();
+renderTestimonials(data.testimonials);
+renderCompanyInfo(data.companyInfo);
+}catch(err){
+console.error('Failed to load site content from /api/content', err);
+document.getElementById('testimonials-container').innerHTML =
+'<p class="empty-note">Couldn’t load testimonials right now — please try again shortly.</p>';
+}
+}
+
+function setupMobileNav(){
+var toggle = document.getElementById('nav-toggle');
+var nav = document.getElementById('site-nav');
+var backdrop = document.getElementById('nav-backdrop');
+if(!toggle || !nav || !backdrop) return;
+
+function closeNav(){
+nav.classList.remove('open');
+backdrop.classList.remove('open');
+toggle.classList.remove('active');
+toggle.setAttribute('aria-expanded', 'false');
+document.body.classList.remove('nav-open-lock');
+}
+
+function openNav(){
+nav.classList.add('open');
+backdrop.classList.add('open');
+toggle.classList.add('active');
+toggle.setAttribute('aria-expanded', 'true');
+document.body.classList.add('nav-open-lock');
+}
+
+toggle.addEventListener('click', function(){
+if(nav.classList.contains('open')){
+closeNav();
+}else{
+openNav();
+}
+});
+
+backdrop.addEventListener('click', closeNav);
+
+nav.querySelectorAll('a').forEach(function(link){
+link.addEventListener('click', closeNav);
+});
+
+window.addEventListener('resize', function(){
+if(window.innerWidth > 768){
+closeNav();
+}
+});
+}
+
+document.addEventListener('DOMContentLoaded', function(){
+loadContent();
+setupMobileNav();
+});
+
+</script>
+
+</body>
+
+</html>

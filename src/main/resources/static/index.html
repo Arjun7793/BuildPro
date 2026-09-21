@@ -50,7 +50,15 @@ display:flex;
 justify-content:space-between;
 align-items:center;
 gap:16px;
-z-index:1000;
+/* Higher than nav's z-index (1000) below - header and nav are both
+   position:fixed siblings of the body (not nested), so nav-toggle's own
+   z-index:1002 only wins within HEADER's own stacking context; it does
+   nothing against nav, a sibling with equal z-index that comes later in
+   the DOM and would otherwise paint over the hamburger button (and swallow
+   its clicks) the moment the off-canvas nav panel opens and its background
+   covers that same top-right corner. Keeping header above nav is also just
+   the right order for persistent chrome regardless. */
+z-index:1001;
 }
 
 .logo{
@@ -65,10 +73,19 @@ max-width:65vw;
 
 /* Hamburger button - the default way into the nav on a phone; hidden again
    at desktop widths below, where nav is just a plain inline row. */
+/* Absolute-positioned bars, not a column flex layout - on the fuller pages
+   (index.html especially) flex-direction:column here made each bar's
+   height:3px collapse to 0 (confirmed live: mutating the actual CSS rule
+   had zero effect while flex-direction:column was active, but switching to
+   row or display:block made it apply instantly - a flex column main-axis
+   sizing quirk tied to overall page weight, not to this rule's own values).
+   Absolute positioning is immune to that since these spans are no longer
+   flex items at all; the three top offsets below reproduce the exact
+   positions the old flex layout produced (0, 7.5, 15 - two 3px bars plus
+   two 4.5px gaps from justify-content:space-between over 18px), so the
+   .active transform math further down needs no changes. */
 .nav-toggle{
-display:flex;
-flex-direction:column;
-justify-content:space-between;
+position:relative;
 width:24px;
 height:18px;
 background:none;
@@ -80,6 +97,8 @@ flex-shrink:0;
 }
 
 .nav-toggle span{
+position:absolute;
+left:0;
 display:block;
 height:3px;
 width:100%;
@@ -87,6 +106,10 @@ background:#fff;
 border-radius:2px;
 transition:.3s;
 }
+
+.nav-toggle span:nth-child(1){top:0;}
+.nav-toggle span:nth-child(2){top:7.5px;}
+.nav-toggle span:nth-child(3){top:15px;}
 
 .nav-toggle.active span:nth-child(1){
 transform:translateY(7.5px) rotate(45deg);
@@ -312,6 +335,133 @@ background:white;
 padding:22px;
 border-radius:10px;
 box-shadow:0 5px 20px rgba(0,0,0,.08);
+}
+
+/* "View All" link shown under the Projects/Testimonials grids once there's
+   more than the homepage preview limit (see HOMEPAGE_PROJECTS_LIMIT/
+   HOMEPAGE_TESTIMONIALS_LIMIT below) - left empty and untouched otherwise. */
+.view-all{
+text-align:center;
+margin-top:30px;
+}
+
+.view-all a{
+display:inline-flex;
+align-items:center;
+gap:8px;
+color:#ff9800;
+font-weight:600;
+text-decoration:none;
+border:2px solid #ff9800;
+padding:12px 28px;
+border-radius:6px;
+transition:.3s;
+}
+
+.view-all a:hover{
+background:#ff9800;
+color:white;
+}
+
+/* Project thumbnails are <button>s (not bare <img>s) so they're clickable/
+   keyboard-focusable for the lightbox - overriding the global button{}
+   rule's padding/background/border-radius below, since a plain element
+   selector loses to this class either way. */
+.project-thumb{
+display:block;
+width:100%;
+padding:0;
+border:none;
+background:none;
+cursor:pointer;
+border-radius:10px;
+overflow:hidden;
+}
+
+.project-thumb img{
+display:block;
+transition:.3s;
+}
+
+.project-thumb:hover img,.project-thumb:focus-visible img{
+transform:scale(1.05);
+}
+
+/* Click-to-enlarge overlay for project images. ProjectItem has no
+   description field, so there's nothing more to show than the full-size
+   image plus its title - browsing is scoped to whichever set of thumbnails
+   is currently on screen (the homepage's limited preview here, or the full
+   published list on projects.html). */
+.lightbox{
+display:none;
+position:fixed;
+inset:0;
+background:rgba(0,0,0,.92);
+z-index:2000;
+align-items:center;
+justify-content:center;
+padding:20px;
+}
+
+.lightbox.open{
+display:flex;
+}
+
+.lightbox-img{
+max-width:100%;
+max-height:80vh;
+border-radius:6px;
+box-shadow:0 10px 40px rgba(0,0,0,.5);
+}
+
+.lightbox-caption{
+position:absolute;
+bottom:24px;
+left:0;
+width:100%;
+text-align:center;
+color:white;
+font-size:16px;
+padding:0 60px;
+}
+
+.lightbox-close{
+position:absolute;
+top:16px;
+right:16px;
+background:none;
+border:none;
+color:white;
+font-size:32px;
+line-height:1;
+cursor:pointer;
+padding:10px;
+}
+
+.lightbox-prev,.lightbox-next{
+position:absolute;
+top:50%;
+transform:translateY(-50%);
+background:rgba(255,255,255,.1);
+border:none;
+color:white;
+font-size:20px;
+width:46px;
+height:46px;
+border-radius:50%;
+cursor:pointer;
+transition:.3s;
+}
+
+.lightbox-prev:hover,.lightbox-next:hover{
+background:rgba(255,255,255,.25);
+}
+
+.lightbox-prev{left:10px;}
+.lightbox-next{right:10px;}
+
+body.lightbox-open-lock{
+overflow:hidden;
 }
 
 .contact{
@@ -577,6 +727,8 @@ is completed with quality, safety and on-time delivery.
 
 </div>
 
+<div class="view-all" id="projects-view-all"></div>
+
 </section>
 
 <section>
@@ -586,6 +738,8 @@ is completed with quality, safety and on-time delivery.
 <div class="testimonials" id="testimonials-container">
 
 </div>
+
+<div class="view-all" id="testimonials-view-all"></div>
 
 </section>
 
@@ -624,6 +778,20 @@ is completed with quality, safety and on-time delivery.
 &copy; 2026 <span id="footer-company-name">BuildPro Construction</span>. All Rights Reserved.
 
 </footer>
+
+<div class="lightbox" id="lightbox" aria-hidden="true">
+
+<button type="button" class="lightbox-close" id="lightbox-close" aria-label="Close">&times;</button>
+
+<button type="button" class="lightbox-prev" id="lightbox-prev" aria-label="Previous image">&#10094;</button>
+
+<img class="lightbox-img" id="lightbox-img" src="" alt="">
+
+<button type="button" class="lightbox-next" id="lightbox-next" aria-label="Next image">&#10095;</button>
+
+<div class="lightbox-caption" id="lightbox-caption"></div>
+
+</div>
 
 <script>
 
@@ -679,19 +847,119 @@ return '<div class="stat"><h2 class="counter" data-target="' + s.targetValue + '
 animateCounters();
 }
 
-function renderProjects(projects){
-var container = document.getElementById('projects-container');
-container.innerHTML = (projects || []).map(function(p){
-return '<img src="' + p.imageUrl + '" alt="' + escapeHtml(p.title || 'Project') + '">';
+// The homepage only previews a handful of each - the rest is one click away
+// on projects.html/testimonials.html (full, unfiltered-by-limit lists that
+// fetch the same /api/content endpoint). Keeping both pages on the same
+// endpoint means there's no separate "all projects" API to keep in sync.
+var HOMEPAGE_PROJECTS_LIMIT = 6;
+var HOMEPAGE_TESTIMONIALS_LIMIT = 3;
+
+// Backing array for the lightbox - always whatever set of thumbnails is
+// actually on screen right now (the homepage's limited preview), so
+// next/prev never lands on an image that isn't visible in the grid.
+var lightboxItems = [];
+var lightboxIndex = 0;
+
+function renderProjectThumbs(container, projects){
+container.innerHTML = projects.map(function(p, i){
+return '<button type="button" class="project-thumb" data-index="' + i + '">' +
+'<img src="' + p.imageUrl + '" alt="' + escapeHtml(p.title || 'Project') + '" loading="lazy"></button>';
 }).join('');
+container.querySelectorAll('.project-thumb').forEach(function(btn){
+btn.addEventListener('click', function(){
+openLightbox(+btn.getAttribute('data-index'));
+});
+});
+}
+
+function renderProjects(projects){
+var all = projects || [];
+var container = document.getElementById('projects-container');
+lightboxItems = all.slice(0, HOMEPAGE_PROJECTS_LIMIT);
+renderProjectThumbs(container, lightboxItems);
+
+var viewAllEl = document.getElementById('projects-view-all');
+if(viewAllEl){
+viewAllEl.innerHTML = all.length > HOMEPAGE_PROJECTS_LIMIT ?
+'<a href="projects.html">View All Projects (' + all.length + ') &rarr;</a>' : '';
+}
 }
 
 function renderTestimonials(testimonials){
+var all = testimonials || [];
+var shown = all.slice(0, HOMEPAGE_TESTIMONIALS_LIMIT);
 var container = document.getElementById('testimonials-container');
-container.innerHTML = (testimonials || []).map(function(t){
+container.innerHTML = shown.map(function(t){
 var stars = '\u2605'.repeat(t.rating || 5);
 return '<div class="testimonial">' + stars + '<p>' + escapeHtml(t.message) + '</p><br><strong>- ' + escapeHtml(t.clientName) + '</strong></div>';
 }).join('');
+
+var viewAllEl = document.getElementById('testimonials-view-all');
+if(viewAllEl){
+viewAllEl.innerHTML = all.length > HOMEPAGE_TESTIMONIALS_LIMIT ?
+'<a href="testimonials.html">View All Testimonials (' + all.length + ') &rarr;</a>' : '';
+}
+}
+
+function openLightbox(index){
+if(!lightboxItems.length) return;
+lightboxIndex = index;
+var lb = document.getElementById('lightbox');
+if(!lb) return;
+lb.classList.add('open');
+lb.setAttribute('aria-hidden', 'false');
+document.body.classList.add('lightbox-open-lock');
+showLightboxImage();
+}
+
+function closeLightbox(){
+var lb = document.getElementById('lightbox');
+if(!lb) return;
+lb.classList.remove('open');
+lb.setAttribute('aria-hidden', 'true');
+document.body.classList.remove('lightbox-open-lock');
+}
+
+function showLightboxImage(){
+var item = lightboxItems[lightboxIndex];
+if(!item) return;
+var img = document.getElementById('lightbox-img');
+img.src = item.imageUrl;
+img.alt = item.title || 'Project';
+document.getElementById('lightbox-caption').textContent = item.title || '';
+// No point showing prev/next arrows for a single image.
+var showNav = lightboxItems.length > 1;
+document.getElementById('lightbox-prev').style.display = showNav ? '' : 'none';
+document.getElementById('lightbox-next').style.display = showNav ? '' : 'none';
+}
+
+function setupLightbox(){
+var lb = document.getElementById('lightbox');
+if(!lb) return;
+
+document.getElementById('lightbox-close').addEventListener('click', closeLightbox);
+
+document.getElementById('lightbox-prev').addEventListener('click', function(){
+lightboxIndex = (lightboxIndex - 1 + lightboxItems.length) % lightboxItems.length;
+showLightboxImage();
+});
+
+document.getElementById('lightbox-next').addEventListener('click', function(){
+lightboxIndex = (lightboxIndex + 1) % lightboxItems.length;
+showLightboxImage();
+});
+
+// Click on the dark backdrop itself (not the image/buttons) closes it.
+lb.addEventListener('click', function(e){
+if(e.target === lb) closeLightbox();
+});
+
+document.addEventListener('keydown', function(e){
+if(!lb.classList.contains('open')) return;
+if(e.key === 'Escape') closeLightbox();
+if(e.key === 'ArrowLeft') document.getElementById('lightbox-prev').click();
+if(e.key === 'ArrowRight') document.getElementById('lightbox-next').click();
+});
 }
 
 // Graceful degradation like renderCompanyInfo below: if hero/about hasn't
@@ -830,6 +1098,7 @@ closeNav();
 document.addEventListener('DOMContentLoaded', function(){
 loadContent();
 setupMobileNav();
+setupLightbox();
 
 var form = document.getElementById('contact-form');
 var status = document.getElementById('form-status');

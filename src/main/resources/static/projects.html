@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Our Projects</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+
+/* This page (and testimonials.html) shares its look with index.html by
+   design, not by a shared stylesheet - the whole site is a handful of
+   self-contained static pages with no build step, so each one inlines its
+   own copy the same way index.html and every admin/*.html page already do.
+   The reset, header/nav, and footer blocks below are copied verbatim from
+   index.html; keep them in sync by hand if either changes. */
+
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+font-family:'Poppins',sans-serif;
+scroll-behavior:smooth;
+}
+
+html,body{
+overflow-x:hidden;
+}
+
+body{
+background:#f7f7f7;
+color:#333;
+}
+
+header{
+position:fixed;
+top:0;
+width:100%;
+background:#222;
+padding:12px 5%;
+display:flex;
+justify-content:space-between;
+align-items:center;
+gap:16px;
+/* Higher than nav's z-index (1000) below - header and nav are both
+   position:fixed siblings of the body (not nested), so nav-toggle's own
+   z-index:1002 only wins within HEADER's own stacking context; it does
+   nothing against nav, a sibling with equal z-index that comes later in
+   the DOM and would otherwise paint over the hamburger button (and swallow
+   its clicks) the moment the off-canvas nav panel opens and its background
+   covers that same top-right corner. Keeping header above nav is also just
+   the right order for persistent chrome regardless. */
+z-index:1001;
+}
+
+.logo{
+font-size:clamp(18px,4.5vw,28px);
+font-weight:700;
+color:#ffb400;
+white-space:nowrap;
+overflow:hidden;
+text-overflow:ellipsis;
+max-width:65vw;
+text-decoration:none;
+display:inline-block;
+}
+
+/* Absolute-positioned bars, not a column flex layout - on the fuller pages
+   (index.html especially) flex-direction:column here made each bar's
+   height:3px collapse to 0 (confirmed live: mutating the actual CSS rule
+   had zero effect while flex-direction:column was active, but switching to
+   row or display:block made it apply instantly - a flex column main-axis
+   sizing quirk tied to overall page weight, not to this rule's own values).
+   Absolute positioning is immune to that since these spans are no longer
+   flex items at all; the three top offsets below reproduce the exact
+   positions the old flex layout produced (0, 7.5, 15 - two 3px bars plus
+   two 4.5px gaps from justify-content:space-between over 18px), so the
+   .active transform math further down needs no changes. */
+.nav-toggle{
+position:relative;
+width:24px;
+height:18px;
+background:none;
+border:none;
+padding:0;
+cursor:pointer;
+z-index:1002;
+flex-shrink:0;
+}
+
+.nav-toggle span{
+position:absolute;
+left:0;
+display:block;
+height:3px;
+width:100%;
+background:#fff;
+border-radius:2px;
+transition:.3s;
+}
+
+.nav-toggle span:nth-child(1){top:0;}
+.nav-toggle span:nth-child(2){top:7.5px;}
+.nav-toggle span:nth-child(3){top:15px;}
+
+.nav-toggle.active span:nth-child(1){
+transform:translateY(7.5px) rotate(45deg);
+}
+
+.nav-toggle.active span:nth-child(2){
+opacity:0;
+}
+
+.nav-toggle.active span:nth-child(3){
+transform:translateY(-7.5px) rotate(-45deg);
+}
+
+nav{
+display:flex;
+flex-direction:column;
+align-items:flex-start;
+gap:6px;
+position:fixed;
+top:0;
+right:0;
+height:100vh;
+width:min(78%,300px);
+background:#222;
+padding:90px 30px 30px;
+box-shadow:-10px 0 30px rgba(0,0,0,.3);
+transform:translateX(100%);
+transition:transform .3s ease;
+z-index:1000;
+}
+
+nav.open{
+transform:translateX(0);
+}
+
+nav a{
+text-decoration:none;
+color:white;
+transition:.3s;
+width:100%;
+padding:14px 0;
+border-bottom:1px solid rgba(255,255,255,.12);
+}
+
+nav a:hover,nav a.active{
+color:#ffb400;
+}
+
+.nav-backdrop{
+display:none;
+position:fixed;
+inset:0;
+background:rgba(0,0,0,.5);
+z-index:999;
+}
+
+.nav-backdrop.open{
+display:block;
+}
+
+body.nav-open-lock,body.lightbox-open-lock{
+overflow:hidden;
+}
+
+.page-banner{
+background:#222;
+color:white;
+text-align:center;
+padding:130px 6% 50px;
+}
+
+.page-banner h1{
+font-size:clamp(28px,5vw,44px);
+margin-bottom:10px;
+}
+
+.page-banner p{
+color:#bbb;
+}
+
+.page-banner a{
+color:#ffb400;
+text-decoration:none;
+}
+
+.page-banner a:hover{
+text-decoration:underline;
+}
+
+section{
+padding:60px 6%;
+}
+
+.empty-note{
+text-align:center;
+color:#888;
+padding:40px 0;
+}
+
+.projects{
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+gap:20px;
+}
+
+.project-thumb{
+display:block;
+width:100%;
+padding:0;
+border:none;
+background:none;
+cursor:pointer;
+border-radius:10px;
+overflow:hidden;
+}
+
+.project-thumb img{
+display:block;
+width:100%;
+border-radius:10px;
+height:220px;
+object-fit:cover;
+transition:.3s;
+}
+
+.project-thumb:hover img,.project-thumb:focus-visible img{
+transform:scale(1.05);
+}
+
+.project-caption{
+margin-top:10px;
+font-weight:600;
+color:#222;
+text-align:center;
+}
+
+.lightbox{
+display:none;
+position:fixed;
+inset:0;
+background:rgba(0,0,0,.92);
+z-index:2000;
+align-items:center;
+justify-content:center;
+padding:20px;
+}
+
+.lightbox.open{
+display:flex;
+}
+
+.lightbox-img{
+max-width:100%;
+max-height:80vh;
+border-radius:6px;
+box-shadow:0 10px 40px rgba(0,0,0,.5);
+}
+
+.lightbox-caption{
+position:absolute;
+bottom:24px;
+left:0;
+width:100%;
+text-align:center;
+color:white;
+font-size:16px;
+padding:0 60px;
+}
+
+.lightbox-close{
+position:absolute;
+top:16px;
+right:16px;
+background:none;
+border:none;
+color:white;
+font-size:32px;
+line-height:1;
+cursor:pointer;
+padding:10px;
+}
+
+.lightbox-prev,.lightbox-next{
+position:absolute;
+top:50%;
+transform:translateY(-50%);
+background:rgba(255,255,255,.1);
+border:none;
+color:white;
+font-size:20px;
+width:46px;
+height:46px;
+border-radius:50%;
+cursor:pointer;
+transition:.3s;
+}
+
+.lightbox-prev:hover,.lightbox-next:hover{
+background:rgba(255,255,255,.25);
+}
+
+.lightbox-prev{left:10px;}
+.lightbox-next{right:10px;}
+
+footer{
+background:#111;
+color:white;
+text-align:center;
+padding:30px;
+}
+
+@media(min-width:769px){
+
+header{
+padding:18px 8%;
+}
+
+.nav-toggle{
+display:none;
+}
+
+nav{
+position:static;
+height:auto;
+width:auto;
+background:none;
+padding:0;
+box-shadow:none;
+transform:none;
+flex-direction:row;
+gap:0;
+}
+
+nav a{
+width:auto;
+margin-left:30px;
+padding:0;
+border-bottom:none;
+}
+
+section{
+padding:70px 8%;
+}
+
+.projects{
+gap:25px;
+}
+
+.project-thumb img{
+height:250px;
+}
+
+}
+
+</style>
+
+</head>
+
+<body>
+
+<header>
+
+<a class="logo" id="site-logo" href="index.html" title="Home">BuildPro</a>
+
+<button type="button" class="nav-toggle" id="nav-toggle" aria-label="Toggle menu" aria-expanded="false" aria-controls="site-nav">
+<span></span>
+<span></span>
+<span></span>
+</button>
+
+<nav id="site-nav">
+
+<a href="index.html#home">Home</a>
+<a href="index.html#about">About</a>
+<a href="index.html#services">Services</a>
+<a href="projects.html" class="active">Projects</a>
+<a href="index.html#contact">Contact</a>
+
+</nav>
+
+</header>
+
+<div class="nav-backdrop" id="nav-backdrop"></div>
+
+<div class="page-banner">
+
+<h1>Our Projects</h1>
+<p><a href="index.html">Home</a> / Projects</p>
+
+</div>
+
+<section>
+
+<div class="projects" id="projects-container"></div>
+
+</section>
+
+<footer>
+
+&copy; 2026 <span id="footer-company-name">BuildPro Construction</span>. All Rights Reserved.
+
+</footer>
+
+<div class="lightbox" id="lightbox" aria-hidden="true">
+
+<button type="button" class="lightbox-close" id="lightbox-close" aria-label="Close">&times;</button>
+
+<button type="button" class="lightbox-prev" id="lightbox-prev" aria-label="Previous image">&#10094;</button>
+
+<img class="lightbox-img" id="lightbox-img" src="" alt="">
+
+<button type="button" class="lightbox-next" id="lightbox-next" aria-label="Next image">&#10095;</button>
+
+<div class="lightbox-caption" id="lightbox-caption"></div>
+
+</div>
+
+<script>
+
+function escapeHtml(str){
+if(str === undefined || str === null) return '';
+return String(str).replace(/[&<>"']/g, function(m){
+return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m];
+});
+}
+
+var lightboxItems = [];
+var lightboxIndex = 0;
+
+function renderProjects(projects){
+lightboxItems = projects || [];
+var container = document.getElementById('projects-container');
+if(lightboxItems.length === 0){
+container.innerHTML = '<p class="empty-note">No projects yet — check back soon.</p>';
+return;
+}
+container.innerHTML = lightboxItems.map(function(p, i){
+return '<div><button type="button" class="project-thumb" data-index="' + i + '">' +
+'<img src="' + p.imageUrl + '" alt="' + escapeHtml(p.title || 'Project') + '" loading="lazy"></button>' +
+(p.title ? '<div class="project-caption">' + escapeHtml(p.title) + '</div>' : '') +
+'</div>';
+}).join('');
+container.querySelectorAll('.project-thumb').forEach(function(btn){
+btn.addEventListener('click', function(){
+openLightbox(+btn.getAttribute('data-index'));
+});
+});
+}
+
+function openLightbox(index){
+if(!lightboxItems.length) return;
+lightboxIndex = index;
+var lb = document.getElementById('lightbox');
+lb.classList.add('open');
+lb.setAttribute('aria-hidden', 'false');
+document.body.classList.add('lightbox-open-lock');
+showLightboxImage();
+}
+
+function closeLightbox(){
+var lb = document.getElementById('lightbox');
+lb.classList.remove('open');
+lb.setAttribute('aria-hidden', 'true');
+document.body.classList.remove('lightbox-open-lock');
+}
+
+function showLightboxImage(){
+var item = lightboxItems[lightboxIndex];
+if(!item) return;
+var img = document.getElementById('lightbox-img');
+img.src = item.imageUrl;
+img.alt = item.title || 'Project';
+document.getElementById('lightbox-caption').textContent = item.title || '';
+var showNav = lightboxItems.length > 1;
+document.getElementById('lightbox-prev').style.display = showNav ? '' : 'none';
+document.getElementById('lightbox-next').style.display = showNav ? '' : 'none';
+}
+
+function setupLightbox(){
+var lb = document.getElementById('lightbox');
+if(!lb) return;
+
+document.getElementById('lightbox-close').addEventListener('click', closeLightbox);
+
+document.getElementById('lightbox-prev').addEventListener('click', function(){
+lightboxIndex = (lightboxIndex - 1 + lightboxItems.length) % lightboxItems.length;
+showLightboxImage();
+});
+
+document.getElementById('lightbox-next').addEventListener('click', function(){
+lightboxIndex = (lightboxIndex + 1) % lightboxItems.length;
+showLightboxImage();
+});
+
+lb.addEventListener('click', function(e){
+if(e.target === lb) closeLightbox();
+});
+
+document.addEventListener('keydown', function(e){
+if(!lb.classList.contains('open')) return;
+if(e.key === 'Escape') closeLightbox();
+if(e.key === 'ArrowLeft') document.getElementById('lightbox-prev').click();
+if(e.key === 'ArrowRight') document.getElementById('lightbox-next').click();
+});
+}
+
+function renderCompanyInfo(info){
+if(!info) return;
+var name = (info.companyName || '').trim() || 'BuildPro Construction';
+document.title = 'Our Projects | ' + name;
+var footerNameEl = document.getElementById('footer-company-name');
+if(footerNameEl) footerNameEl.textContent = name;
+var logoEl = document.getElementById('site-logo');
+if(logoEl) logoEl.textContent = name;
+}
+
+async function loadContent(){
+try{
+var res = await fetch('/api/content');
+if(!res.ok) throw new Error('request failed: ' + res.status);
+var data = await res.json();
+renderProjects(data.projects);
+renderCompanyInfo(data.companyInfo);
+}catch(err){
+console.error('Failed to load site content from /api/content', err);
+document.getElementById('projects-container').innerHTML =
+'<p class="empty-note">Couldn’t load projects right now — please try again shortly.</p>';
+}
+}
+
+function setupMobileNav(){
+var toggle = document.getElementById('nav-toggle');
+var nav = document.getElementById('site-nav');
+var backdrop = document.getElementById('nav-backdrop');
+if(!toggle || !nav || !backdrop) return;
+
+function closeNav(){
+nav.classList.remove('open');
+backdrop.classList.remove('open');
+toggle.classList.remove('active');
+toggle.setAttribute('aria-expanded', 'false');
+document.body.classList.remove('nav-open-lock');
+}
+
+function openNav(){
+nav.classList.add('open');
+backdrop.classList.add('open');
+toggle.classList.add('active');
+toggle.setAttribute('aria-expanded', 'true');
+document.body.classList.add('nav-open-lock');
+}
+
+toggle.addEventListener('click', function(){
+if(nav.classList.contains('open')){
+closeNav();
+}else{
+openNav();
+}
+});
+
+backdrop.addEventListener('click', closeNav);
+
+nav.querySelectorAll('a').forEach(function(link){
+link.addEventListener('click', closeNav);
+});
+
+window.addEventListener('resize', function(){
+if(window.innerWidth > 768){
+closeNav();
+}
+});
+}
+
+document.addEventListener('DOMContentLoaded', function(){
+loadContent();
+setupMobileNav();
+setupLightbox();
+});
+
+</script>
+
+</body>
+
+</html>

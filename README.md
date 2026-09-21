@@ -32,6 +32,11 @@ src/main/resources/
   application-prod.yaml    validate-only schema, Swagger disabled, no auto-seeding
   data.sql                 idempotent seed data matching the original static page
   static/index.html        the page itself, fetches its content from /api/content
+  static/projects.html     full projects gallery (with a click-to-enlarge lightbox) -
+                            linked from index.html's "View All Projects" once there
+                            are more than the homepage's 6-item preview
+  static/testimonials.html full testimonials list - same "View All" pattern, 3-item
+                            homepage preview
 ```
 
 ## Prerequisites

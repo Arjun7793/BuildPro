@@ -575,6 +575,60 @@ All notable changes to this project are documented here.
   gesture handling doesn't fight `touchmove`'s `preventDefault()`, and
   enlarged the handle's tap target.
 
+### Added
+- Homepage Projects and Testimonials sections were unbounded - every
+  published project/testimonial rendered directly onto the homepage grid, no
+  matter how many there were. Now the homepage previews the first 6 projects
+  and first 3 testimonials (in their existing `displayOrder`) and, only when
+  there are more than that, shows a "View All" link under the grid to a new
+  standalone page - `projects.html` / `testimonials.html` - that lists every
+  published one, unbounded, fetching the same `/api/content` endpoint the
+  homepage already uses (no new API). Both new pages are self-contained
+  static HTML, matching every other page on this site (no shared CSS/JS
+  file, no build step) - header/nav/footer copied from `index.html` by hand,
+  kept in sync manually like `admin/*.html` already are.
+- Click-to-enlarge image view for projects, on both the homepage preview and
+  the new `projects.html` gallery: clicking a project thumbnail opens a
+  full-size lightbox overlay with the project's title and Prev/Next
+  navigation (Escape closes, arrow keys navigate, clicking the dark backdrop
+  closes) scoped to whichever set of thumbnails is actually on screen -
+  the homepage's 6-item preview there, the full list on `projects.html`.
+  `ProjectItem` has no description field, so the lightbox shows exactly what
+  the entity has (image + title), same as a separate detail page would have
+  - not worth the extra page/route for the same information. No lightbox
+  library added; it's plain DOM/CSS, consistent with the rest of the site.
+
+### Fixed
+- Saving an item in `/admin/content` (reported: uploading a project's image)
+  could fail with an opaque "Save failed with status 401" and no indication
+  of what to do about it. Root cause: `SecurityConfig` returns a plain 401 on
+  `/api/**` (rather than redirecting to `/admin/login`) once the session has
+  expired - by design, so the admin JS can detect it - but the modal's
+  save/image-upload/toggle-publish/reorder error handling never actually
+  checked for that status, so it just surfaced the raw HTTP code. All four
+  write paths now recognize a 401 specifically and show "Your admin session
+  has expired - open /admin/login in another tab, log in again, then click
+  Save here to retry", since the session cookie is shared across tabs on the
+  same origin: logging in elsewhere and retrying in the original tab works
+  without losing whatever was already typed (or, for an image, already
+  picked but not yet uploaded) in the still-open modal.
+
+### Fixed
+- The mobile hamburger button (top-right of the header) became invisible
+  and unclickable the moment the off-canvas nav was open, on `index.html`,
+  `projects.html`, and `testimonials.html` alike. Cause: `header` and `nav`
+  are both `position:fixed` siblings of `<body>` with the same
+  `z-index:1000` - `.nav-toggle`'s own `z-index:1002` only wins inside
+  `header`'s own stacking context, it does nothing against `nav`, a sibling
+  with equal z-index that comes later in the DOM and therefore paints on
+  top where the two overlap (the open nav panel's own background covers
+  the same top-right corner the toggle button sits in, right underneath
+  it). Nav could still be closed via the backdrop or by tapping a link, so
+  it wasn't a full lockout, but the toggle itself - meant to double as the
+  close button (it animates into an "X") - was neither visible nor
+  clickable while open. Fixed by raising `header` to `z-index:1001` in all
+  three files, so it always paints above `nav`.
+
 ## [0.3.0] - API + Postgres-backed content
 
 ### Added
