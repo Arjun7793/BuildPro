@@ -4,6 +4,7 @@ import com.example.buildpro.entity.AboutSection;
 import com.example.buildpro.entity.CompanyInfo;
 import com.example.buildpro.entity.HeroSection;
 import com.example.buildpro.entity.ProjectItem;
+import com.example.buildpro.entity.SamplePlan;
 import com.example.buildpro.entity.ServiceItem;
 import com.example.buildpro.entity.Stat;
 import com.example.buildpro.entity.Testimonial;
@@ -20,6 +21,7 @@ public class SiteContentResponse {
     private List<ServiceItem> services;
     private List<Stat> stats;
     private List<ProjectItem> projects;
+    private List<SamplePlan> samplePlans;
     private List<Testimonial> testimonials;
     private CompanyInfo companyInfo;
 }

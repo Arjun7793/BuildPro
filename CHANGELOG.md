@@ -5,6 +5,22 @@ All notable changes to this project are documented here.
 ## [Unreleased]
 
 ### Added
+- Added a **Sample Plans** section under Projects - 2D sketches and 3D
+  animations, manageable from a new admin section (`/admin/content`) and shown
+  in a new gallery on the public Projects page (`projects.html`). New entity
+  `SamplePlan` (table `sample_plans`, changeset `006-sample-plans.yaml`) with
+  a `planType` (`SKETCH_2D` / `ANIMATION_3D`), the same hybrid pasted-URL-or-
+  uploaded-image field as `ProjectItem`, and a `videoUrl` used only by
+  3D Animation items (a YouTube/Vimeo/direct link, embedded in the public
+  lightbox rather than stored as bytes - video files are too big for the
+  existing bytea-in-Postgres image pattern). New `SamplePlanController` at
+  `/api/sample-plans` mirrors `ProjectController` exactly (CRUD +
+  `POST/GET {id}/image`), wired into the combined `/api/content` payload
+  (published-only, like every other content list) and into `SecurityConfig`'s
+  existing POST/PUT/DELETE-requires-admin rules. The admin panel's declarative
+  `SECTIONS` config (`admin/content.html`) gained a new `select` field type
+  (for `planType`) to support this without changing its existing generic
+  add/edit/delete/reorder/publish machinery.
 - Added Liquibase for schema migrations, replacing the old "run this ALTER
   TABLE by hand before deploying" pattern used for the project image upload
   columns. Changesets live under `src/main/resources/db/changelog/`

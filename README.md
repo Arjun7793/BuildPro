@@ -95,7 +95,8 @@ non-JSON `Accept` headers get `406`).
 | --- | --- | --- |
 | Services | `/api/services` | GET, GET/{id}, POST\*, PUT/{id}\*, DELETE/{id}\* |
 | Stats | `/api/stats` | GET, GET/{id}, POST\*, PUT/{id}\*, DELETE/{id}\* |
-| Projects | `/api/projects` | GET, GET/{id}, POST\*, PUT/{id}\*, DELETE/{id}\* |
+| Projects | `/api/projects` | GET, GET/{id}, POST\*, PUT/{id}\*, DELETE/{id}\*, POST/{id}/image\* (upload), GET/{id}/image |
+| Sample Plans (2D sketches / 3D animations) | `/api/sample-plans` | GET, GET/{id}, POST\*, PUT/{id}\*, DELETE/{id}\*, POST/{id}/image\* (upload), GET/{id}/image |
 | Testimonials | `/api/testimonials` | GET, GET/{id}, POST\*, PUT/{id}\*, DELETE/{id}\* |
 | Company info | `/api/company-info` | GET, GET/{id}, POST\*, PUT/{id}\*, DELETE/{id}\* |
 | Home / Cover section | `/api/hero-section` | GET, GET/{id}, POST\*, PUT/{id}\*, DELETE/{id}\*, POST/{id}/image\* (upload), GET/{id}/image |
@@ -158,19 +159,20 @@ account:
   page, newest first, with Prev/Next controls) and filterable by name (substring,
   debounced) and/or a from/to submission-date range (`GET /api/leads?name=&from=&to=`).
 - **`/admin/content`** — add, edit, and delete everything shown on the public site:
-  the Home/Cover banner, About Us, services, stats, projects, testimonials, and
-  company info. Each section is a table with an "+ Add" button; editing opens a
+  the Home/Cover banner, About Us, services, stats, projects, 2D Sketch / 3D
+  Animations (shown under Projects), testimonials, and company info. Each section is a table with an "+ Add" button; editing opens a
   small form in a modal, which shows field-specific validation errors (e.g. "title
   is required" under the Title field) instead of only a generic failure message.
   Changes go live immediately once published, since the public page reads the same
   data via `/api/content`.
   - Home/Cover and About Us (like Company info) are singletons: there's always
     exactly one row, so their table only offers Edit — no "+ Add" or Delete.
-  - Services, stats, projects, and testimonials support drag-to-reorder: drag a row
-    by its handle to change `displayOrder` instead of typing a number. Only the
-    rows whose order actually changed are saved (existing `PUT {path}/{id}`, no new
+  - Services, stats, projects, sample plans, and testimonials support drag-to-reorder:
+    drag a row by its handle to change `displayOrder` instead of typing a number. Only
+    the rows whose order actually changed are saved (existing `PUT {path}/{id}`, no new
     endpoint); new items are appended to the end automatically.
-  - Services, stats, projects, and testimonials also have a **Published**/**Draft**
+  - Services, stats, projects, sample plans, and testimonials also have a
+    **Published**/**Draft**
     flag (`published` on the entity, defaulting to `true` so nothing already live
     goes dark). A draft is saved and fully editable in the admin panel like any
     other item, but is filtered out of `/api/content` — the endpoint the public
@@ -179,15 +181,21 @@ account:
     the quick Publish/Unpublish button next to each row. (Home/Cover, About Us,
     and Company Info are singletons with no draft concept — they're either
     configured or they aren't.)
-  - Projects, Home/Cover's background image, and About Us's image all have the same
-    hybrid image upload option: the Image field takes either a pasted URL or a
-    picked file. An uploaded file is sent to `POST {path}/{id}/image` (multipart,
-    5MB max) and stored as bytes directly in Postgres, served back via
+  - Projects, sample plans, Home/Cover's background image, and About Us's image all
+    have the same hybrid image upload option: the Image field takes either a pasted
+    URL or a picked file. An uploaded file is sent to `POST {path}/{id}/image`
+    (multipart, 5MB max) and stored as bytes directly in Postgres, served back via
     `GET {path}/{id}/image` (public, cached a day) — e.g.
-    `POST /api/projects/{id}/image`, `POST /api/hero-section/{id}/image`,
-    `POST /api/about-section/{id}/image`. Switching the field back to a pasted URL
-    (or clearing it) drops the previously uploaded bytes on save. See "Database
-    migrations" below.
+    `POST /api/projects/{id}/image`, `POST /api/sample-plans/{id}/image`,
+    `POST /api/hero-section/{id}/image`, `POST /api/about-section/{id}/image`.
+    Switching the field back to a pasted URL (or clearing it) drops the previously
+    uploaded bytes on save. See "Database migrations" below.
+  - A 2D Sketch / 3D Animation item also has a **Plan type** (2D Sketch / 3D Animation) and, only
+    meaningful for 3D Animation, a **Video URL** — a YouTube/Vimeo/direct video
+    link. On the public Projects page, a 2D Sketch opens its image in the lightbox
+    like a project photo; a 3D Animation opens the video link in the same lightbox
+    (embedded for YouTube/Vimeo, otherwise linked directly) instead of its image,
+    which is used only as the card's thumbnail.
 
 All three are clean-URL forwards to their static pages (`/admin/login.html`,
 `/admin/leads.html`, `/admin/content.html`, see `AdminViewController`) so the address
@@ -214,13 +222,13 @@ visitors submitting it have no admin session to carry a token in.
 The `GET`/`DELETE` endpoints on `/api/leads` require the same admin login (submitting
 the form via `POST /api/leads` stays public, since visitors use it with no account).
 Likewise, `POST`/`PUT`/`DELETE` on `/api/services`, `/api/stats`, `/api/projects`,
-`/api/testimonials`, `/api/company-info`, `/api/hero-section`, and `/api/about-section`
-require the admin login — `GET` on all of them stays public, since the live site's
-own `/api/content` call depends on it. The `POST {path}/{id}/image` upload
-sub-endpoints (projects, hero-section, about-section) each have their own explicit
-authenticated rule in `SecurityConfig`, since a base resource's POST rule doesn't
-cover a nested sub-path; `GET {path}/{id}/image` stays public alongside every
-other `GET`.
+`/api/sample-plans`, `/api/testimonials`, `/api/company-info`, `/api/hero-section`,
+and `/api/about-section` require the admin login — `GET` on all of them stays public,
+since the live site's own `/api/content` call depends on it. The `POST {path}/{id}/image`
+upload sub-endpoints (projects, sample-plans, hero-section, about-section) each have
+their own explicit authenticated rule in `SecurityConfig`, since a base resource's
+POST rule doesn't cover a nested sub-path; `GET {path}/{id}/image` stays public
+alongside every other `GET`.
 A fetch call from the admin pages that isn't signed in (e.g. an expired session)
 gets a clean `401` rather than a redirect, so the page can show "not signed in"
 instead of a broken response; a direct browser visit to a protected admin page still
@@ -312,6 +320,10 @@ no `data.sql`/`spring.sql.init` anymore. Changesets live under
   `about_section` (`*_image_data` `BYTEA`, `*_image_content_type`
   `VARCHAR(255)`), so both sections support the same upload-a-file image
   option as Projects, instead of only a pasted URL.
+- `006-sample-plans.yaml` - `createTable` for `sample_plans` (the Sample
+  Plans admin section / public gallery: 2D sketches and 3D animations shown
+  under Projects, with the same hybrid image-upload columns as `projects`
+  plus a `video_url` for the 3D Animation type).
 
 Spring Boot runs pending changesets automatically on every startup (local and
 Railway) and tracks which ones have already run per-database in its

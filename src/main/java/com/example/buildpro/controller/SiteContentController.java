@@ -21,7 +21,7 @@ public class SiteContentController {
     private final SiteContentService siteContentService;
 
     @GetMapping
-    @Operation(summary = "Get services, stats, projects, testimonials and company info together")
+    @Operation(summary = "Get services, stats, projects, sample plans, testimonials and company info together")
     public SiteContentResponse getContent() {
         return siteContentService.getContent();
     }

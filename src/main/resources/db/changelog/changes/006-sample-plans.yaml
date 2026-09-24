@@ -1,0 +1,60 @@
+databaseChangeLog:
+  # Adds the Sample Plans admin section/public gallery - 2D sketches and 3D
+  # animations shown under Projects (see entity/SamplePlan.java and the
+  # matching 'sample-plans' SECTIONS entry in admin/content.html). A brand
+  # new table, so - unlike 001-baseline-schema.yaml's `projects.title` -
+  # `title`/`plan_type`/`published` get real NOT NULL constraints from the
+  # start; there's no pre-existing production data to be incompatible with.
+  # No seed rows and no id-sequence bump (see 002/003's "seed-bump-sequences"
+  # changesets) - nothing is inserted here with an explicit id, so the
+  # autoIncrement sequence never gets out of step.
+
+  - changeSet:
+      id: 006-sample_plans
+      author: arjun
+      comment: sample_plans table - 2D sketch / 3D animation items shown under Projects
+      changes:
+        - createTable:
+            tableName: sample_plans
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: plan_type
+                  type: VARCHAR(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: title
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: description
+                  type: VARCHAR(2000)
+              - column:
+                  name: image_url
+                  type: VARCHAR(1000)
+              - column:
+                  name: image_data
+                  type: BYTEA
+              - column:
+                  name: image_content_type
+                  type: VARCHAR(255)
+              - column:
+                  name: video_url
+                  type: VARCHAR(1000)
+              - column:
+                  name: display_order
+                  type: INT
+              - column:
+                  name: published
+                  type: BOOLEAN
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false

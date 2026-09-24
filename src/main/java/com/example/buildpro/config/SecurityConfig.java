@@ -19,7 +19,7 @@ import org.springframework.security.web.csrf.CsrfFilter;
 import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 
 // Protects everything under /admin/**, plus every write (POST/PUT/DELETE) on the
-// site content endpoints (services, stats, projects, testimonials, company-info)
+// site content endpoints (services, stats, projects, sample plans, testimonials, company-info)
 // and the leads read/delete endpoints, with a single admin account.
 //
 // Admins sign in through a real login page (/admin/login, see AdminViewController
@@ -86,22 +86,22 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/leads", "/api/leads/**").authenticated()
                         .requestMatchers(HttpMethod.DELETE, "/api/leads/**").authenticated()
                         .requestMatchers(HttpMethod.POST,
-                                "/api/services", "/api/stats", "/api/projects",
+                                "/api/services", "/api/stats", "/api/projects", "/api/sample-plans",
                                 "/api/testimonials", "/api/company-info",
                                 "/api/hero-section", "/api/about-section").authenticated()
-                        // Project image upload lives under /api/projects/{id}/image -
-                        // not covered by the bare "/api/projects" match above, so it
-                        // needs its own rule or it would fall through to the public
-                        // catch-all at the bottom.
-                        .requestMatchers(HttpMethod.POST, "/api/projects/*/image").authenticated()
+                        // Project/sample-plan image upload lives under /api/projects/{id}/image
+                        // and /api/sample-plans/{id}/image - not covered by the bare
+                        // "/api/projects"/"/api/sample-plans" matches above, so each needs its
+                        // own rule or it would fall through to the public catch-all at the bottom.
+                        .requestMatchers(HttpMethod.POST, "/api/projects/*/image", "/api/sample-plans/*/image").authenticated()
                         .requestMatchers(HttpMethod.POST,
                                 "/api/hero-section/*/image", "/api/about-section/*/image").authenticated()
                         .requestMatchers(HttpMethod.PUT,
-                                "/api/services/**", "/api/stats/**", "/api/projects/**",
+                                "/api/services/**", "/api/stats/**", "/api/projects/**", "/api/sample-plans/**",
                                 "/api/testimonials/**", "/api/company-info/**",
                                 "/api/hero-section/**", "/api/about-section/**").authenticated()
                         .requestMatchers(HttpMethod.DELETE,
-                                "/api/services/**", "/api/stats/**", "/api/projects/**",
+                                "/api/services/**", "/api/stats/**", "/api/projects/**", "/api/sample-plans/**",
                                 "/api/testimonials/**", "/api/company-info/**",
                                 "/api/hero-section/**", "/api/about-section/**").authenticated()
                         // Everything else - every GET (the live site's own content

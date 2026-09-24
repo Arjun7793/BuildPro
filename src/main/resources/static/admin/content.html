@@ -938,6 +938,43 @@ var SECTIONS = [
     ]
   },
   {
+    key: 'sample-plans',
+    title: '2D Sketch / 3D Animations',
+    path: '/api/sample-plans',
+    singular: 'sample plan',
+    sortable: true,
+    // See the identical comment on the services section above.
+    togglePublish: true,
+    columns: [
+      {key:'imageUrl', label:'Image', image:true},
+      {key:'title', label:'Title'},
+      {key:'planType', label:'Type', options:[
+        {value:'SKETCH_2D', label:'2D Sketch'},
+        {value:'ANIMATION_3D', label:'3D Animation'}
+      ]},
+      {key:'displayOrder', label:'Order'},
+      {key:'published', label:'Status', status:true}
+    ],
+    fields: [
+      {name:'planType', label:'Plan type', type:'select', required:true, default:'SKETCH_2D',
+        options:[
+          {value:'SKETCH_2D', label:'2D Sketch'},
+          {value:'ANIMATION_3D', label:'3D Animation'}
+        ],
+        hint:'2D Sketch shows the image below full-size. 3D Animation uses the image as a thumbnail and opens the video link when clicked.'},
+      {name:'title', label:'Title', type:'text', required:true},
+      {name:'description', label:'Description', type:'textarea'},
+      // Same hybrid URL-or-upload image control as the Projects section above -
+      // required for every plan (it's the sketch itself, or the 3D animation's
+      // thumbnail) - see validateImageField/handleImageUploadIfNeeded.
+      {name:'imageUrl', label:'Image', type:'image', placeholder:'https://...'},
+      {name:'videoUrl', label:'Video URL', type:'text', placeholder:'https://youtube.com/watch?v=...',
+        hint:'A YouTube, Vimeo, or direct video link. Only used for 3D Animation plans.'},
+      {name:'published', label:'Published', type:'checkbox', default:true,
+        hint:'Unchecked items are saved but hidden from the public site until published.'}
+    ]
+  },
+  {
     key: 'testimonials',
     title: 'Testimonials',
     path: '/api/testimonials',
@@ -1172,6 +1209,10 @@ function renderCell(col, item){
 var value = item[col.key];
 if(col.image){
 return value ? '<img class="thumb" src="' + escapeHtml(value) + '" alt="">' : '&mdash;';
+}
+if(col.options){
+var opt = col.options.find(function(o){ return o.value === value; });
+return opt ? escapeHtml(opt.label) : (value ? escapeHtml(value) : '&mdash;');
 }
 if(col.text){
 return '<span class="text-cell" title="' + escapeHtml(value || '') + '">' + (value ? escapeHtml(value) : '&mdash;') + '</span>';
@@ -1417,6 +1458,18 @@ return '<div class="field field-checkbox">' +
 '<label><input type="checkbox" name="' + field.name + '"' + (checked ? ' checked' : '') + '> ' + field.label + '</label>' +
 (field.hint ? '<div class="hint">' + field.hint + '</div>' : '') +
 '</div>';
+}
+
+if(field.type === 'select'){
+// Existing item: its actual saved value. New item: field.default, same
+// fallback pattern as the checkbox case above.
+var selectedValue = item ? value : field.default;
+var optionsMarkup = (field.options || []).map(function(opt){
+return '<option value="' + escapeHtml(opt.value) + '"' + (opt.value === selectedValue ? ' selected' : '') + '>' + escapeHtml(opt.label) + '</option>';
+}).join('');
+return '<div class="field"><label>' + field.label + (field.required ? ' *' : '') + '</label>' +
+'<select name="' + field.name + '"' + (field.required ? ' required' : '') + '>' + optionsMarkup + '</select>' +
+(field.hint ? '<div class="hint">' + field.hint + '</div>' : '') + '</div>';
 }
 
 var input = field.type === 'textarea'

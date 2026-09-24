@@ -464,6 +464,55 @@ body.lightbox-open-lock{
 overflow:hidden;
 }
 
+/* Sample Plans preview grid reuses .projects/.project-thumb above - these two
+   are its only additions: a type badge on every card, and a play icon on 3D
+   Animation cards (see renderPlans/PLAN_TYPE_LABELS below). */
+.plan-thumb{
+position:relative;
+}
+
+.plan-badge{
+position:absolute;
+top:10px;
+left:10px;
+background:rgba(0,0,0,.65);
+color:#fff;
+font-size:12px;
+font-weight:600;
+padding:4px 10px;
+border-radius:20px;
+}
+
+.plan-play-icon{
+position:absolute;
+top:50%;
+left:50%;
+transform:translate(-50%,-50%);
+width:52px;
+height:52px;
+border-radius:50%;
+background:rgba(0,0,0,.55);
+color:#fff;
+display:flex;
+align-items:center;
+justify-content:center;
+font-size:18px;
+pointer-events:none;
+}
+
+.lightbox-video-wrap{
+width:min(90vw,960px);
+aspect-ratio:16/9;
+}
+
+.lightbox-video-wrap iframe{
+width:100%;
+height:100%;
+border:0;
+border-radius:6px;
+box-shadow:0 10px 40px rgba(0,0,0,.5);
+}
+
 .contact{
 display:grid;
 grid-template-columns:1fr;
@@ -731,6 +780,18 @@ is completed with quality, safety and on-time delivery.
 
 </section>
 
+<section id="sample-plans">
+
+<h2 class="title">2D Sketch / 3D Animations</h2>
+
+<div class="projects" id="plans-container">
+
+</div>
+
+<div class="view-all" id="plans-view-all"></div>
+
+</section>
+
 <section>
 
 <h2 class="title">What Clients Say</h2>
@@ -793,6 +854,24 @@ is completed with quality, safety and on-time delivery.
 
 </div>
 
+<div class="lightbox" id="plan-lightbox" aria-hidden="true">
+
+<button type="button" class="lightbox-close" id="plan-lightbox-close" aria-label="Close">&times;</button>
+
+<button type="button" class="lightbox-prev" id="plan-lightbox-prev" aria-label="Previous">&#10094;</button>
+
+<img class="lightbox-img" id="plan-lightbox-img" src="" alt="">
+
+<div class="lightbox-video-wrap" id="plan-lightbox-video-wrap" hidden>
+<iframe id="plan-lightbox-video" src="" title="3D animation" allow="autoplay; fullscreen" allowfullscreen></iframe>
+</div>
+
+<button type="button" class="lightbox-next" id="plan-lightbox-next" aria-label="Next">&#10095;</button>
+
+<div class="lightbox-caption" id="plan-lightbox-caption"></div>
+
+</div>
+
 <script>
 
 function escapeHtml(str){
@@ -852,6 +931,7 @@ animateCounters();
 // fetch the same /api/content endpoint). Keeping both pages on the same
 // endpoint means there's no separate "all projects" API to keep in sync.
 var HOMEPAGE_PROJECTS_LIMIT = 6;
+var HOMEPAGE_PLANS_LIMIT = 6;
 var HOMEPAGE_TESTIMONIALS_LIMIT = 3;
 
 // Backing array for the lightbox - always whatever set of thumbnails is
@@ -883,6 +963,129 @@ if(viewAllEl){
 viewAllEl.innerHTML = all.length > HOMEPAGE_PROJECTS_LIMIT ?
 '<a href="projects.html">View All Projects (' + all.length + ') &rarr;</a>' : '';
 }
+}
+
+// Sample Plans homepage preview - same grid/limit/"View All" pattern as
+// renderProjects above, plus a type badge and (for 3D Animation items) a
+// play-icon overlay. The full, filterable gallery lives on projects.html;
+// "View All" here just links there.
+var PLAN_TYPE_LABELS = {SKETCH_2D: '2D Sketch', ANIMATION_3D: '3D Animation'};
+var planLightboxItems = [];
+var planLightboxIndex = 0;
+
+function renderPlans(plans){
+var all = plans || [];
+var shown = all.slice(0, HOMEPAGE_PLANS_LIMIT);
+planLightboxItems = shown;
+
+var container = document.getElementById('plans-container');
+container.innerHTML = shown.map(function(p, i){
+var isVideo = p.planType === 'ANIMATION_3D';
+return '<button type="button" class="project-thumb plan-thumb" data-index="' + i + '">' +
+'<img src="' + p.imageUrl + '" alt="' + escapeHtml(p.title || '2D Sketch / 3D Animation') + '" loading="lazy">' +
+(isVideo ? '<span class="plan-play-icon">&#9658;</span>' : '') +
+'<span class="plan-badge">' + (PLAN_TYPE_LABELS[p.planType] || p.planType) + '</span>' +
+'</button>';
+}).join('');
+container.querySelectorAll('.plan-thumb').forEach(function(btn){
+btn.addEventListener('click', function(){
+openPlanLightbox(+btn.getAttribute('data-index'));
+});
+});
+
+var viewAllEl = document.getElementById('plans-view-all');
+if(viewAllEl){
+viewAllEl.innerHTML = all.length > HOMEPAGE_PLANS_LIMIT ?
+'<a href="projects.html">View All 2D Sketch / 3D Animations (' + all.length + ') &rarr;</a>' : '';
+}
+}
+
+// Converts a YouTube/Vimeo "watch" URL into its embeddable form so it can sit
+// inside an <iframe>; anything else (a direct video file, or a link that's
+// already an embed URL) is passed through unchanged. Same helper as
+// projects.html.
+function toEmbedUrl(url){
+if(!url) return '';
+var youtube = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([\w-]{6,})/);
+if(youtube) return 'https://www.youtube.com/embed/' + youtube[1];
+var vimeo = url.match(/vimeo\.com\/(\d+)/);
+if(vimeo) return 'https://player.vimeo.com/video/' + vimeo[1];
+return url;
+}
+
+function openPlanLightbox(index){
+if(!planLightboxItems.length) return;
+planLightboxIndex = index;
+var lb = document.getElementById('plan-lightbox');
+if(!lb) return;
+lb.classList.add('open');
+lb.setAttribute('aria-hidden', 'false');
+document.body.classList.add('lightbox-open-lock');
+showPlanLightboxItem();
+}
+
+function closePlanLightbox(){
+var lb = document.getElementById('plan-lightbox');
+if(!lb) return;
+lb.classList.remove('open');
+lb.setAttribute('aria-hidden', 'true');
+document.body.classList.remove('lightbox-open-lock');
+// Stop any playing video the moment the lightbox closes.
+document.getElementById('plan-lightbox-video').src = '';
+}
+
+function showPlanLightboxItem(){
+var item = planLightboxItems[planLightboxIndex];
+if(!item) return;
+var isVideo = item.planType === 'ANIMATION_3D' && item.videoUrl;
+var img = document.getElementById('plan-lightbox-img');
+var videoWrap = document.getElementById('plan-lightbox-video-wrap');
+var video = document.getElementById('plan-lightbox-video');
+
+if(isVideo){
+img.hidden = true;
+videoWrap.hidden = false;
+video.src = toEmbedUrl(item.videoUrl);
+}else{
+videoWrap.hidden = true;
+video.src = '';
+img.hidden = false;
+img.src = item.imageUrl;
+img.alt = item.title || '2D Sketch / 3D Animation';
+}
+
+document.getElementById('plan-lightbox-caption').textContent = item.title || '';
+var showNav = planLightboxItems.length > 1;
+document.getElementById('plan-lightbox-prev').style.display = showNav ? '' : 'none';
+document.getElementById('plan-lightbox-next').style.display = showNav ? '' : 'none';
+}
+
+function setupPlanLightbox(){
+var lb = document.getElementById('plan-lightbox');
+if(!lb) return;
+
+document.getElementById('plan-lightbox-close').addEventListener('click', closePlanLightbox);
+
+document.getElementById('plan-lightbox-prev').addEventListener('click', function(){
+planLightboxIndex = (planLightboxIndex - 1 + planLightboxItems.length) % planLightboxItems.length;
+showPlanLightboxItem();
+});
+
+document.getElementById('plan-lightbox-next').addEventListener('click', function(){
+planLightboxIndex = (planLightboxIndex + 1) % planLightboxItems.length;
+showPlanLightboxItem();
+});
+
+lb.addEventListener('click', function(e){
+if(e.target === lb) closePlanLightbox();
+});
+
+document.addEventListener('keydown', function(e){
+if(!lb.classList.contains('open')) return;
+if(e.key === 'Escape') closePlanLightbox();
+if(e.key === 'ArrowLeft') document.getElementById('plan-lightbox-prev').click();
+if(e.key === 'ArrowRight') document.getElementById('plan-lightbox-next').click();
+});
 }
 
 function renderTestimonials(testimonials){
@@ -1042,6 +1245,7 @@ renderAbout(data.aboutSection);
 renderServices(data.services);
 renderStats(data.stats);
 renderProjects(data.projects);
+renderPlans(data.samplePlans);
 renderTestimonials(data.testimonials);
 renderCompanyInfo(data.companyInfo);
 }catch(err){
@@ -1099,6 +1303,7 @@ document.addEventListener('DOMContentLoaded', function(){
 loadContent();
 setupMobileNav();
 setupLightbox();
+setupPlanLightbox();
 
 var form = document.getElementById('contact-form');
 var status = document.getElementById('form-status');

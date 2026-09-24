@@ -240,6 +240,82 @@ color:#222;
 text-align:center;
 }
 
+.section-heading{
+text-align:center;
+font-size:clamp(22px,4vw,32px);
+color:#222;
+margin-bottom:8px;
+}
+
+.section-subheading{
+text-align:center;
+color:#777;
+margin-bottom:30px;
+}
+
+.plan-filters{
+display:flex;
+justify-content:center;
+flex-wrap:wrap;
+gap:10px;
+margin-bottom:25px;
+}
+
+.plan-filter-btn{
+border:1px solid #ddd;
+background:#fff;
+color:#444;
+padding:8px 18px;
+border-radius:30px;
+cursor:pointer;
+font-size:14px;
+font-weight:500;
+transition:.3s;
+}
+
+.plan-filter-btn:hover{
+border-color:#ffb400;
+}
+
+.plan-filter-btn.active{
+background:#ffb400;
+border-color:#ffb400;
+color:#222;
+}
+
+.plan-thumb{
+position:relative;
+}
+
+.plan-badge{
+position:absolute;
+top:10px;
+left:10px;
+background:rgba(0,0,0,.65);
+color:#fff;
+font-size:12px;
+font-weight:600;
+padding:4px 10px;
+border-radius:20px;
+}
+
+.plan-play-icon{
+position:absolute;
+top:50%;
+left:50%;
+transform:translate(-50%,-50%);
+width:52px;
+height:52px;
+border-radius:50%;
+background:rgba(0,0,0,.55);
+color:#fff;
+display:flex;
+align-items:center;
+justify-content:center;
+font-size:18px;
+pointer-events:none;
+}
+
 .lightbox{
 display:none;
 position:fixed;
@@ -307,6 +383,19 @@ background:rgba(255,255,255,.25);
 
 .lightbox-prev{left:10px;}
 .lightbox-next{right:10px;}
+
+.lightbox-video-wrap{
+width:min(90vw,960px);
+aspect-ratio:16/9;
+}
+
+.lightbox-video-wrap iframe{
+width:100%;
+height:100%;
+border:0;
+border-radius:6px;
+box-shadow:0 10px 40px rgba(0,0,0,.5);
+}
 
 footer{
 background:#111;
@@ -401,6 +490,21 @@ height:250px;
 
 </section>
 
+<section>
+
+<h2 class="section-heading">2D Sketch / 3D Animations</h2>
+<p class="section-subheading">2D sketches and 3D animations from our recent work.</p>
+
+<div class="plan-filters" id="plan-filters">
+<button type="button" class="plan-filter-btn active" data-filter="all">All</button>
+<button type="button" class="plan-filter-btn" data-filter="SKETCH_2D">2D Sketches</button>
+<button type="button" class="plan-filter-btn" data-filter="ANIMATION_3D">3D Animations</button>
+</div>
+
+<div class="projects" id="plans-container"></div>
+
+</section>
+
 <footer>
 
 &copy; 2026 <span id="footer-company-name">BuildPro Construction</span>. All Rights Reserved.
@@ -421,6 +525,24 @@ height:250px;
 
 </div>
 
+<div class="lightbox" id="plan-lightbox" aria-hidden="true">
+
+<button type="button" class="lightbox-close" id="plan-lightbox-close" aria-label="Close">&times;</button>
+
+<button type="button" class="lightbox-prev" id="plan-lightbox-prev" aria-label="Previous">&#10094;</button>
+
+<img class="lightbox-img" id="plan-lightbox-img" src="" alt="">
+
+<div class="lightbox-video-wrap" id="plan-lightbox-video-wrap" hidden>
+<iframe id="plan-lightbox-video" src="" title="3D animation" allow="autoplay; fullscreen" allowfullscreen></iframe>
+</div>
+
+<button type="button" class="lightbox-next" id="plan-lightbox-next" aria-label="Next">&#10095;</button>
+
+<div class="lightbox-caption" id="plan-lightbox-caption"></div>
+
+</div>
+
 <script>
 
 function escapeHtml(str){
@@ -432,6 +554,11 @@ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m];
 
 var lightboxItems = [];
 var lightboxIndex = 0;
+
+var allPlans = [];
+var planLightboxItems = [];
+var planLightboxIndex = 0;
+var currentPlanFilter = 'all';
 
 function renderProjects(projects){
 lightboxItems = projects || [];
@@ -450,6 +577,142 @@ container.querySelectorAll('.project-thumb').forEach(function(btn){
 btn.addEventListener('click', function(){
 openLightbox(+btn.getAttribute('data-index'));
 });
+});
+}
+
+// Sample Plans grid - same card layout as renderProjects, plus a type badge
+// and (for 3D Animation items) a play-icon overlay. Filtering is client-side
+// over the one /api/content payload already fetched - no extra request per
+// filter click.
+var PLAN_TYPE_LABELS = {SKETCH_2D: '2D Sketch', ANIMATION_3D: '3D Animation'};
+
+function renderPlans(plans){
+allPlans = plans || [];
+applyPlanFilter(currentPlanFilter);
+}
+
+function applyPlanFilter(filter){
+currentPlanFilter = filter;
+planLightboxItems = filter === 'all' ? allPlans : allPlans.filter(function(p){ return p.planType === filter; });
+
+document.querySelectorAll('.plan-filter-btn').forEach(function(btn){
+btn.classList.toggle('active', btn.getAttribute('data-filter') === filter);
+});
+
+var container = document.getElementById('plans-container');
+if(!container) return;
+if(planLightboxItems.length === 0){
+container.innerHTML = '<p class="empty-note">No 2D sketches or 3D animations yet — check back soon.</p>';
+return;
+}
+container.innerHTML = planLightboxItems.map(function(p, i){
+var isVideo = p.planType === 'ANIMATION_3D';
+return '<div><button type="button" class="project-thumb plan-thumb" data-index="' + i + '">' +
+'<img src="' + p.imageUrl + '" alt="' + escapeHtml(p.title || '2D Sketch / 3D Animation') + '" loading="lazy">' +
+(isVideo ? '<span class="plan-play-icon">&#9658;</span>' : '') +
+'<span class="plan-badge">' + (PLAN_TYPE_LABELS[p.planType] || p.planType) + '</span>' +
+'</button>' +
+(p.title ? '<div class="project-caption">' + escapeHtml(p.title) + '</div>' : '') +
+'</div>';
+}).join('');
+container.querySelectorAll('.plan-thumb').forEach(function(btn){
+btn.addEventListener('click', function(){
+openPlanLightbox(+btn.getAttribute('data-index'));
+});
+});
+}
+
+function setupPlanFilters(){
+document.querySelectorAll('.plan-filter-btn').forEach(function(btn){
+btn.addEventListener('click', function(){
+applyPlanFilter(btn.getAttribute('data-filter'));
+});
+});
+}
+
+// Converts a YouTube/Vimeo "watch" URL into its embeddable form so it can sit
+// inside an <iframe>; anything else (a direct video file, or a link that's
+// already an embed URL) is passed through unchanged.
+function toEmbedUrl(url){
+if(!url) return '';
+var youtube = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([\w-]{6,})/);
+if(youtube) return 'https://www.youtube.com/embed/' + youtube[1];
+var vimeo = url.match(/vimeo\.com\/(\d+)/);
+if(vimeo) return 'https://player.vimeo.com/video/' + vimeo[1];
+return url;
+}
+
+function openPlanLightbox(index){
+if(!planLightboxItems.length) return;
+planLightboxIndex = index;
+var lb = document.getElementById('plan-lightbox');
+lb.classList.add('open');
+lb.setAttribute('aria-hidden', 'false');
+document.body.classList.add('lightbox-open-lock');
+showPlanLightboxItem();
+}
+
+function closePlanLightbox(){
+var lb = document.getElementById('plan-lightbox');
+lb.classList.remove('open');
+lb.setAttribute('aria-hidden', 'true');
+document.body.classList.remove('lightbox-open-lock');
+// Stop any playing video the moment the lightbox closes, rather than letting
+// it keep running silently behind the scenes.
+document.getElementById('plan-lightbox-video').src = '';
+}
+
+function showPlanLightboxItem(){
+var item = planLightboxItems[planLightboxIndex];
+if(!item) return;
+var isVideo = item.planType === 'ANIMATION_3D' && item.videoUrl;
+var img = document.getElementById('plan-lightbox-img');
+var videoWrap = document.getElementById('plan-lightbox-video-wrap');
+var video = document.getElementById('plan-lightbox-video');
+
+if(isVideo){
+img.hidden = true;
+videoWrap.hidden = false;
+video.src = toEmbedUrl(item.videoUrl);
+}else{
+videoWrap.hidden = true;
+video.src = '';
+img.hidden = false;
+img.src = item.imageUrl;
+img.alt = item.title || '2D Sketch / 3D Animation';
+}
+
+document.getElementById('plan-lightbox-caption').textContent = item.title || '';
+var showNav = planLightboxItems.length > 1;
+document.getElementById('plan-lightbox-prev').style.display = showNav ? '' : 'none';
+document.getElementById('plan-lightbox-next').style.display = showNav ? '' : 'none';
+}
+
+function setupPlanLightbox(){
+var lb = document.getElementById('plan-lightbox');
+if(!lb) return;
+
+document.getElementById('plan-lightbox-close').addEventListener('click', closePlanLightbox);
+
+document.getElementById('plan-lightbox-prev').addEventListener('click', function(){
+planLightboxIndex = (planLightboxIndex - 1 + planLightboxItems.length) % planLightboxItems.length;
+showPlanLightboxItem();
+});
+
+document.getElementById('plan-lightbox-next').addEventListener('click', function(){
+planLightboxIndex = (planLightboxIndex + 1) % planLightboxItems.length;
+showPlanLightboxItem();
+});
+
+lb.addEventListener('click', function(e){
+if(e.target === lb) closePlanLightbox();
+});
+
+document.addEventListener('keydown', function(e){
+if(!lb.classList.contains('open')) return;
+if(e.key === 'Escape') closePlanLightbox();
+if(e.key === 'ArrowLeft') document.getElementById('plan-lightbox-prev').click();
+if(e.key === 'ArrowRight') document.getElementById('plan-lightbox-next').click();
 });
 }
 
@@ -526,11 +789,14 @@ var res = await fetch('/api/content');
 if(!res.ok) throw new Error('request failed: ' + res.status);
 var data = await res.json();
 renderProjects(data.projects);
+renderPlans(data.samplePlans);
 renderCompanyInfo(data.companyInfo);
 }catch(err){
 console.error('Failed to load site content from /api/content', err);
 document.getElementById('projects-container').innerHTML =
 '<p class="empty-note">Couldn’t load projects right now — please try again shortly.</p>';
+document.getElementById('plans-container').innerHTML =
+'<p class="empty-note">Couldn’t load 2D sketches / 3D animations right now — please try again shortly.</p>';
 }
 }
 
@@ -581,6 +847,8 @@ document.addEventListener('DOMContentLoaded', function(){
 loadContent();
 setupMobileNav();
 setupLightbox();
+setupPlanLightbox();
+setupPlanFilters();
 });
 
 </script>
