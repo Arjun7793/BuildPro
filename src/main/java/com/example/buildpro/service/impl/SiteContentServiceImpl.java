@@ -13,6 +13,7 @@ import com.example.buildpro.service.ProjectItemService;
 import com.example.buildpro.service.SamplePlanService;
 import com.example.buildpro.service.ServiceItemService;
 import com.example.buildpro.service.SiteContentService;
+import com.example.buildpro.service.SiteSectionSettingsService;
 import com.example.buildpro.service.StatService;
 import com.example.buildpro.service.TestimonialService;
 import lombok.RequiredArgsConstructor;
@@ -32,6 +33,7 @@ public class SiteContentServiceImpl implements SiteContentService {
     private final SamplePlanService samplePlanService;
     private final TestimonialService testimonialService;
     private final CompanyInfoService companyInfoService;
+    private final SiteSectionSettingsService siteSectionSettingsService;
 
     @Override
     public SiteContentResponse getContent() {
@@ -51,7 +53,8 @@ public class SiteContentServiceImpl implements SiteContentService {
                 onlyPublished(projectItemService.findAll(), ProjectItem::getPublished),
                 onlyPublished(samplePlanService.findAll(), SamplePlan::getPublished),
                 onlyPublished(testimonialService.findAll(), Testimonial::getPublished),
-                companyInfoService.findAll().stream().findFirst().orElse(null)
+                companyInfoService.findAll().stream().findFirst().orElse(null),
+                siteSectionSettingsService.findAll().stream().findFirst().orElse(null)
         );
     }
 

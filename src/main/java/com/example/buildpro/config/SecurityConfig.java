@@ -19,7 +19,7 @@ import org.springframework.security.web.csrf.CsrfFilter;
 import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 
 // Protects everything under /admin/**, plus every write (POST/PUT/DELETE) on the
-// site content endpoints (services, stats, projects, sample plans, testimonials, company-info)
+// site content endpoints (services, stats, projects, sample plans, testimonials, company-info, site-sections)
 // and the leads read/delete endpoints, with a single admin account.
 //
 // Admins sign in through a real login page (/admin/login, see AdminViewController
@@ -87,7 +87,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.DELETE, "/api/leads/**").authenticated()
                         .requestMatchers(HttpMethod.POST,
                                 "/api/services", "/api/stats", "/api/projects", "/api/sample-plans",
-                                "/api/testimonials", "/api/company-info",
+                                "/api/testimonials", "/api/company-info", "/api/site-sections",
                                 "/api/hero-section", "/api/about-section").authenticated()
                         // Project/sample-plan image upload lives under /api/projects/{id}/image
                         // and /api/sample-plans/{id}/image - not covered by the bare
@@ -98,11 +98,11 @@ public class SecurityConfig {
                                 "/api/hero-section/*/image", "/api/about-section/*/image").authenticated()
                         .requestMatchers(HttpMethod.PUT,
                                 "/api/services/**", "/api/stats/**", "/api/projects/**", "/api/sample-plans/**",
-                                "/api/testimonials/**", "/api/company-info/**",
+                                "/api/testimonials/**", "/api/company-info/**", "/api/site-sections/**",
                                 "/api/hero-section/**", "/api/about-section/**").authenticated()
                         .requestMatchers(HttpMethod.DELETE,
                                 "/api/services/**", "/api/stats/**", "/api/projects/**", "/api/sample-plans/**",
-                                "/api/testimonials/**", "/api/company-info/**",
+                                "/api/testimonials/**", "/api/company-info/**", "/api/site-sections/**",
                                 "/api/hero-section/**", "/api/about-section/**").authenticated()
                         // Everything else - every GET (the live site's own content
                         // fetch, /api/content included) and anything not matched above -

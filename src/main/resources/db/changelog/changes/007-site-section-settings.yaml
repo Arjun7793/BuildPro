@@ -1,0 +1,100 @@
+databaseChangeLog:
+  # The "master config" for which sections of the public site are turned on -
+  # see entity/SiteSectionSettings.java and the matching 'site-sections'
+  # SECTIONS entry in admin/content.html. Singleton table, same shape as
+  # hero_section/about_section (003-hero-about-sections.yaml): one seeded row
+  # (id 1, everything true) so every section stays visible on existing sites
+  # until an admin actually turns one off, plus the matching sequence bump so
+  # a later admin-created row (if this one is ever deleted) doesn't collide
+  # with id 1.
+
+  - changeSet:
+      id: 007-site_section_settings
+      author: arjun
+      comment: site_section_settings table - the on/off flag for each public-site section
+      changes:
+        - createTable:
+            tableName: site_section_settings
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: show_home
+                  type: BOOLEAN
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+              - column:
+                  name: show_about
+                  type: BOOLEAN
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+              - column:
+                  name: show_services
+                  type: BOOLEAN
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+              - column:
+                  name: show_stats
+                  type: BOOLEAN
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+              - column:
+                  name: show_projects
+                  type: BOOLEAN
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+              - column:
+                  name: show_sample_plans
+                  type: BOOLEAN
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+              - column:
+                  name: show_testimonials
+                  type: BOOLEAN
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+              - column:
+                  name: show_contact
+                  type: BOOLEAN
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+
+  - changeSet:
+      id: 007-seed-site_section_settings
+      author: arjun
+      comment: Seed data - a single row with every section on, so existing sites are unaffected until an admin turns one off
+      changes:
+        - insert:
+            tableName: site_section_settings
+            columns:
+              - column: {name: id, valueNumeric: 1}
+              - column: {name: show_home, valueBoolean: true}
+              - column: {name: show_about, valueBoolean: true}
+              - column: {name: show_services, valueBoolean: true}
+              - column: {name: show_stats, valueBoolean: true}
+              - column: {name: show_projects, valueBoolean: true}
+              - column: {name: show_sample_plans, valueBoolean: true}
+              - column: {name: show_testimonials, valueBoolean: true}
+              - column: {name: show_contact, valueBoolean: true}
+
+  - changeSet:
+      id: 007-seed-bump-sequence
+      author: arjun
+      comment: Keep site_section_settings' id sequence ahead of the explicit id inserted above, same as 002/003's seed-bump-sequences changesets
+      changes:
+        - sql:
+            sql: >
+              SELECT setval(pg_get_serial_sequence('site_section_settings', 'id'), COALESCE((SELECT MAX(id) FROM site_section_settings), 1));

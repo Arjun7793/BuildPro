@@ -465,11 +465,11 @@ height:250px;
 
 <nav id="site-nav">
 
-<a href="index.html#home">Home</a>
-<a href="index.html#about">About</a>
-<a href="index.html#services">Services</a>
-<a href="projects.html" class="active">Projects</a>
-<a href="index.html#contact">Contact</a>
+<a href="index.html#home" data-nav-section="home">Home</a>
+<a href="index.html#about" data-nav-section="about">About</a>
+<a href="index.html#services" data-nav-section="services">Services</a>
+<a href="projects.html" class="active" data-nav-section="projects">Projects</a>
+<a href="index.html#contact" data-nav-section="contact">Contact</a>
 
 </nav>
 
@@ -484,13 +484,15 @@ height:250px;
 
 </div>
 
-<section>
+<p class="empty-note" id="page-unavailable-note" style="display:none;padding:60px 6%;">This page isn't available right now.</p>
+
+<section id="projects">
 
 <div class="projects" id="projects-container"></div>
 
 </section>
 
-<section>
+<section id="sample-plans">
 
 <h2 class="section-heading">2D Sketch / 3D Animations</h2>
 <p class="section-subheading">2D sketches and 3D animations from our recent work.</p>
@@ -783,6 +785,42 @@ var logoEl = document.getElementById('site-logo');
 if(logoEl) logoEl.textContent = name;
 }
 
+// The admin's "Section Visibility" master config (see SiteSectionSettings) -
+// hides a whole <section> (and, for the five sections that have one, its nav
+// link) when its flag is off. Same function as index.html/testimonials.html;
+// elements/links this page doesn't have (about/services/stats/home/contact
+// have no <section> here) are simply skipped via the `el &&` guard.
+function applySectionVisibility(settings){
+if(!settings) return;
+var flags = {
+home: settings.showHome,
+about: settings.showAbout,
+services: settings.showServices,
+stats: settings.showStats,
+projects: settings.showProjects,
+'sample-plans': settings.showSamplePlans,
+testimonials: settings.showTestimonials,
+contact: settings.showContact
+};
+Object.keys(flags).forEach(function(key){
+var el = document.getElementById(key);
+// Inline style, not the `hidden` attribute - see the identical comment in
+// index.html's copy of this function (some sections' own CSS sets `display`
+// directly, which would otherwise beat [hidden] at equal specificity).
+if(el) el.style.display = flags[key] ? '' : 'none';
+});
+document.querySelectorAll('[data-nav-section]').forEach(function(link){
+var key = link.getAttribute('data-nav-section');
+if(flags.hasOwnProperty(key)) link.style.display = flags[key] ? '' : 'none';
+});
+
+// This whole page is just the Projects and Sample Plans sections - if an
+// admin has switched both off, show one friendly notice instead of a page
+// that's just header/banner/footer with nothing in between.
+var noteEl = document.getElementById('page-unavailable-note');
+if(noteEl) noteEl.style.display = (flags.projects || flags['sample-plans']) ? 'none' : '';
+}
+
 async function loadContent(){
 try{
 var res = await fetch('/api/content');
@@ -791,6 +829,7 @@ var data = await res.json();
 renderProjects(data.projects);
 renderPlans(data.samplePlans);
 renderCompanyInfo(data.companyInfo);
+applySectionVisibility(data.sectionSettings);
 }catch(err){
 console.error('Failed to load site content from /api/content', err);
 document.getElementById('projects-container').innerHTML =

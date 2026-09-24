@@ -6,6 +6,7 @@ import com.example.buildpro.entity.HeroSection;
 import com.example.buildpro.entity.ProjectItem;
 import com.example.buildpro.entity.SamplePlan;
 import com.example.buildpro.entity.ServiceItem;
+import com.example.buildpro.entity.SiteSectionSettings;
 import com.example.buildpro.entity.Stat;
 import com.example.buildpro.entity.Testimonial;
 import lombok.AllArgsConstructor;
@@ -24,4 +25,5 @@ public class SiteContentResponse {
     private List<SamplePlan> samplePlans;
     private List<Testimonial> testimonials;
     private CompanyInfo companyInfo;
+    private SiteSectionSettings sectionSettings;
 }

@@ -5,6 +5,28 @@ All notable changes to this project are documented here.
 ## [Unreleased]
 
 ### Added
+- Added **Section Visibility** - a master on/off config for which sections of
+  the public site are shown at all, controlled from a new singleton admin
+  section in `/admin/content`. New entity `SiteSectionSettings` (table
+  `site_section_settings`, changeset `007-site-section-settings.yaml`, one
+  seeded row with every section on) with a boolean per section (Home, About,
+  Services, Stats, Projects, 2D Sketch / 3D Animations, Testimonials,
+  Contact). New `SiteSectionSettingsController` at `/api/site-sections`
+  mirrors `CompanyInfoController`'s plain CRUD, wired into `/api/content` as
+  `sectionSettings` (singleton, like `heroSection`/`companyInfo`) and into
+  `SecurityConfig`'s existing POST/PUT/DELETE-requires-admin rules. Every
+  public page (`index.html`, `projects.html`, `testimonials.html`) applies it
+  client-side via a shared `applySectionVisibility()` function: hides the
+  matching `<section>`, hides that section's nav link where one exists (Home/
+  About/Services/Projects/Contact), and - since `projects.html` and
+  `testimonials.html` have nothing else to show once their only section(s)
+  are off - shows a "not available" notice instead of an empty page. Uses
+  inline `style.display`, not the `hidden` attribute, for the two sections
+  (`.hero`, `.stats`) whose own CSS sets `display` directly on the same
+  element and would otherwise beat `[hidden]`'s default rule at equal
+  specificity. The admin panel's `SECTIONS` table gained a second reuse of
+  the `options` column type (added for `planType`) to show each toggle as a
+  Shown/Hidden badge instead of a raw boolean.
 - Added a **Sample Plans** section under Projects - 2D sketches and 3D
   animations, manageable from a new admin section (`/admin/content`) and shown
   in a new gallery on the public Projects page (`projects.html`). New entity

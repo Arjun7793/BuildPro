@@ -99,6 +99,7 @@ non-JSON `Accept` headers get `406`).
 | Sample Plans (2D sketches / 3D animations) | `/api/sample-plans` | GET, GET/{id}, POST\*, PUT/{id}\*, DELETE/{id}\*, POST/{id}/image\* (upload), GET/{id}/image |
 | Testimonials | `/api/testimonials` | GET, GET/{id}, POST\*, PUT/{id}\*, DELETE/{id}\* |
 | Company info | `/api/company-info` | GET, GET/{id}, POST\*, PUT/{id}\*, DELETE/{id}\* |
+| Section visibility (master on/off config) | `/api/site-sections` | GET, GET/{id}, POST\*, PUT/{id}\*, DELETE/{id}\* |
 | Home / Cover section | `/api/hero-section` | GET, GET/{id}, POST\*, PUT/{id}\*, DELETE/{id}\*, POST/{id}/image\* (upload), GET/{id}/image |
 | About Us section | `/api/about-section` | GET, GET/{id}, POST\*, PUT/{id}\*, DELETE/{id}\*, POST/{id}/image\* (upload), GET/{id}/image |
 | Leads (contact form) | `/api/leads` | GET\* (paginated, `?page=&size=`), GET/{id}\*, POST†, DELETE/{id}\* (no PUT) |
@@ -160,7 +161,8 @@ account:
   debounced) and/or a from/to submission-date range (`GET /api/leads?name=&from=&to=`).
 - **`/admin/content`** — add, edit, and delete everything shown on the public site:
   the Home/Cover banner, About Us, services, stats, projects, 2D Sketch / 3D
-  Animations (shown under Projects), testimonials, and company info. Each section is a table with an "+ Add" button; editing opens a
+  Animations (shown under Projects), testimonials, company info, and which of
+  the public site's sections are turned on at all. Each section is a table with an "+ Add" button; editing opens a
   small form in a modal, which shows field-specific validation errors (e.g. "title
   is required" under the Title field) instead of only a generic failure message.
   Changes go live immediately once published, since the public page reads the same
@@ -181,6 +183,16 @@ account:
     the quick Publish/Unpublish button next to each row. (Home/Cover, About Us,
     and Company Info are singletons with no draft concept — they're either
     configured or they aren't.)
+  - **Section Visibility** is a master on/off switch for each block of the public
+    site (Home, About, Services, Stats, Projects, 2D Sketch / 3D Animations,
+    Testimonials, Contact) - a singleton record (`SiteSectionSettings`, same
+    shape as Company info) read via `/api/content` and applied client-side on
+    every public page (`applySectionVisibility()` in index.html/projects.html/
+    testimonials.html). Turning off Home, About, Services, Projects, or Contact
+    also hides that section's link in the top nav; turning off Projects or
+    Testimonials also shows a "not available" notice on their standalone pages
+    (`projects.html`, `testimonials.html`) if visited directly, since those
+    pages have nothing else to show once their one/two sections are hidden.
   - Projects, sample plans, Home/Cover's background image, and About Us's image all
     have the same hybrid image upload option: the Image field takes either a pasted
     URL or a picked file. An uploaded file is sent to `POST {path}/{id}/image`
@@ -222,8 +234,8 @@ visitors submitting it have no admin session to carry a token in.
 The `GET`/`DELETE` endpoints on `/api/leads` require the same admin login (submitting
 the form via `POST /api/leads` stays public, since visitors use it with no account).
 Likewise, `POST`/`PUT`/`DELETE` on `/api/services`, `/api/stats`, `/api/projects`,
-`/api/sample-plans`, `/api/testimonials`, `/api/company-info`, `/api/hero-section`,
-and `/api/about-section` require the admin login — `GET` on all of them stays public,
+`/api/sample-plans`, `/api/testimonials`, `/api/company-info`, `/api/site-sections`,
+`/api/hero-section`, and `/api/about-section` require the admin login — `GET` on all of them stays public,
 since the live site's own `/api/content` call depends on it. The `POST {path}/{id}/image`
 upload sub-endpoints (projects, sample-plans, hero-section, about-section) each have
 their own explicit authenticated rule in `SecurityConfig`, since a base resource's
@@ -324,6 +336,9 @@ no `data.sql`/`spring.sql.init` anymore. Changesets live under
   Plans admin section / public gallery: 2D sketches and 3D animations shown
   under Projects, with the same hybrid image-upload columns as `projects`
   plus a `video_url` for the 3D Animation type).
+- `007-site-section-settings.yaml` - `createTable` for `site_section_settings`
+  (the Section Visibility master config: one seeded row, id 1, every section
+  on) plus the matching id-sequence bump.
 
 Spring Boot runs pending changesets automatically on every startup (local and
 Railway) and tracks which ones have already run per-database in its

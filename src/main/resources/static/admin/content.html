@@ -822,6 +822,39 @@ refreshBranding();
 // com.example.buildpro.entity.
 var SECTIONS = [
   {
+    key: 'site-sections',
+    title: 'Section Visibility',
+    path: '/api/site-sections',
+    singular: 'section visibility record',
+    // Same singleton shape as company-info/home/about below - always exactly
+    // one row, editable, never really "deleted" from this UI.
+    singleton: true,
+    columns: [
+      {key:'showHome', label:'Home', options:[{value:true,label:'Shown'},{value:false,label:'Hidden'}]},
+      {key:'showAbout', label:'About', options:[{value:true,label:'Shown'},{value:false,label:'Hidden'}]},
+      {key:'showServices', label:'Services', options:[{value:true,label:'Shown'},{value:false,label:'Hidden'}]},
+      {key:'showStats', label:'Stats', options:[{value:true,label:'Shown'},{value:false,label:'Hidden'}]},
+      {key:'showProjects', label:'Projects', options:[{value:true,label:'Shown'},{value:false,label:'Hidden'}]},
+      {key:'showSamplePlans', label:'2D Sketch / 3D Animations', options:[{value:true,label:'Shown'},{value:false,label:'Hidden'}]},
+      {key:'showTestimonials', label:'Testimonials', options:[{value:true,label:'Shown'},{value:false,label:'Hidden'}]},
+      {key:'showContact', label:'Contact', options:[{value:true,label:'Shown'},{value:false,label:'Hidden'}]}
+    ],
+    fields: [
+      {name:'showHome', label:'Home (top banner)', type:'checkbox', default:true},
+      {name:'showAbout', label:'About Us', type:'checkbox', default:true},
+      {name:'showServices', label:'Services', type:'checkbox', default:true},
+      {name:'showStats', label:'Stats', type:'checkbox', default:true},
+      {name:'showProjects', label:'Projects', type:'checkbox', default:true,
+        hint:'Also hides the Projects link in the nav and shows a "not available" notice on the standalone Projects page.'},
+      {name:'showSamplePlans', label:'2D Sketch / 3D Animations', type:'checkbox', default:true,
+        hint:'Shown under Projects, both here and on the standalone Projects page.'},
+      {name:'showTestimonials', label:'Testimonials', type:'checkbox', default:true,
+        hint:'Also shows a "not available" notice on the standalone Testimonials page.'},
+      {name:'showContact', label:'Contact', type:'checkbox', default:true,
+        hint:'Also hides the Contact link in the nav. Visitors won\'t be able to submit the contact form while this is off.'}
+    ]
+  },
+  {
     key: 'home',
     title: 'Home / Cover',
     path: '/api/hero-section',

@@ -694,11 +694,11 @@ height:250px;
 
 <nav id="site-nav">
 
-<a href="#home">Home</a>
-<a href="#about">About</a>
-<a href="#services">Services</a>
-<a href="#projects">Projects</a>
-<a href="#contact">Contact</a>
+<a href="#home" data-nav-section="home">Home</a>
+<a href="#about" data-nav-section="about">About</a>
+<a href="#services" data-nav-section="services">Services</a>
+<a href="#projects" data-nav-section="projects">Projects</a>
+<a href="#contact" data-nav-section="contact">Contact</a>
 
 </nav>
 
@@ -792,7 +792,7 @@ is completed with quality, safety and on-time delivery.
 
 </section>
 
-<section>
+<section id="testimonials">
 
 <h2 class="title">What Clients Say</h2>
 
@@ -1235,6 +1235,47 @@ update();
 });
 }
 
+// The admin's "Section Visibility" master config (see SiteSectionSettings) -
+// hides a whole <section> (and, for the five sections that have one, its nav
+// link) when its flag is off. section elements not present on this page
+// (there are none missing on index.html, but this same function is reused
+// verbatim on projects.html/testimonials.html, which only have some of
+// these ids) are simply skipped via the `el &&` guard.
+function applySectionVisibility(settings){
+if(!settings) return;
+var flags = {
+home: settings.showHome,
+about: settings.showAbout,
+services: settings.showServices,
+stats: settings.showStats,
+projects: settings.showProjects,
+'sample-plans': settings.showSamplePlans,
+testimonials: settings.showTestimonials,
+contact: settings.showContact
+};
+// The section element's own id doesn't always match the flag key above -
+// the stats <section> reuses id="stats-container" as its own render target
+// (see renderStats), rather than a plain "stats" id like every other
+// section here.
+var sectionIds = {
+home: 'home', about: 'about', services: 'services', stats: 'stats-container',
+projects: 'projects', 'sample-plans': 'sample-plans', testimonials: 'testimonials', contact: 'contact'
+};
+Object.keys(flags).forEach(function(key){
+var el = document.getElementById(sectionIds[key]);
+// Inline style, not the `hidden` attribute: .hero and .stats set their own
+// `display` (flex/grid) directly on this same <section>, which beats the
+// browser's default [hidden]{display:none} rule at equal specificity (an
+// author class rule always wins over a user-agent one) - so `hidden` alone
+// would silently fail to hide those two. An inline style always wins.
+if(el) el.style.display = flags[key] ? '' : 'none';
+});
+document.querySelectorAll('[data-nav-section]').forEach(function(link){
+var key = link.getAttribute('data-nav-section');
+if(flags.hasOwnProperty(key)) link.style.display = flags[key] ? '' : 'none';
+});
+}
+
 async function loadContent(){
 try{
 var res = await fetch('/api/content');
@@ -1248,6 +1289,7 @@ renderProjects(data.projects);
 renderPlans(data.samplePlans);
 renderTestimonials(data.testimonials);
 renderCompanyInfo(data.companyInfo);
+applySectionVisibility(data.sectionSettings);
 }catch(err){
 console.error('Failed to load site content from /api/content', err);
 }

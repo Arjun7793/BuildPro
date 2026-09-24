@@ -281,11 +281,11 @@ padding:30px;
 
 <nav id="site-nav">
 
-<a href="index.html#home">Home</a>
-<a href="index.html#about">About</a>
-<a href="index.html#services">Services</a>
-<a href="projects.html">Projects</a>
-<a href="index.html#contact">Contact</a>
+<a href="index.html#home" data-nav-section="home">Home</a>
+<a href="index.html#about" data-nav-section="about">About</a>
+<a href="index.html#services" data-nav-section="services">Services</a>
+<a href="projects.html" data-nav-section="projects">Projects</a>
+<a href="index.html#contact" data-nav-section="contact">Contact</a>
 
 </nav>
 
@@ -300,7 +300,9 @@ padding:30px;
 
 </div>
 
-<section>
+<p class="empty-note" id="page-unavailable-note" style="display:none;padding:60px 6%;">This page isn't available right now.</p>
+
+<section id="testimonials">
 
 <div class="testimonials" id="testimonials-container"></div>
 
@@ -344,6 +346,36 @@ var logoEl = document.getElementById('site-logo');
 if(logoEl) logoEl.textContent = name;
 }
 
+// The admin's "Section Visibility" master config (see SiteSectionSettings) -
+// same function as index.html/projects.html. This page has only one section
+// (Testimonials); every other flag/nav link is skipped via the `el &&` guard.
+function applySectionVisibility(settings){
+if(!settings) return;
+var flags = {
+home: settings.showHome,
+about: settings.showAbout,
+services: settings.showServices,
+stats: settings.showStats,
+projects: settings.showProjects,
+'sample-plans': settings.showSamplePlans,
+testimonials: settings.showTestimonials,
+contact: settings.showContact
+};
+Object.keys(flags).forEach(function(key){
+var el = document.getElementById(key);
+if(el) el.style.display = flags[key] ? '' : 'none';
+});
+document.querySelectorAll('[data-nav-section]').forEach(function(link){
+var key = link.getAttribute('data-nav-section');
+if(flags.hasOwnProperty(key)) link.style.display = flags[key] ? '' : 'none';
+});
+
+// This whole page is just the Testimonials section - if it's switched off,
+// show one friendly notice instead of a page that's just header/banner/footer.
+var noteEl = document.getElementById('page-unavailable-note');
+if(noteEl) noteEl.style.display = flags.testimonials ? 'none' : '';
+}
+
 async function loadContent(){
 try{
 var res = await fetch('/api/content');
@@ -351,6 +383,7 @@ if(!res.ok) throw new Error('request failed: ' + res.status);
 var data = await res.json();
 renderTestimonials(data.testimonials);
 renderCompanyInfo(data.companyInfo);
+applySectionVisibility(data.sectionSettings);
 }catch(err){
 console.error('Failed to load site content from /api/content', err);
 document.getElementById('testimonials-container').innerHTML =
