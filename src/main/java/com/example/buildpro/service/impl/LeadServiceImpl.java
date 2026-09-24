@@ -84,8 +84,17 @@ public class LeadServiceImpl implements LeadService {
     @Override
     public LeadStats getStats() {
         LocalDateTime todayStart = LocalDate.now().atStartOfDay();
+        // NOTE: LocalDate.with(DayOfWeek) resolves against the ISO DAY_OF_WEEK
+        // field (Monday=1..Sunday=7), NOT the locale's week-start day. For a
+        // locale whose week starts on Sunday (e.g. en_US), that meant
+        // .with(DayOfWeek.SUNDAY) walked FORWARD to the upcoming Sunday
+        // instead of back to the start of the current week - e.g. on
+        // Thursday 2026-09-24 it produced weekStart = 2026-09-27, a date in
+        // the future, so "this week" always undercounted (often to 0).
+        // WeekFields.dayOfWeek() is the locale-aware field that correctly
+        // walks back to day 1 (the first day) of the current locale week.
         LocalDateTime weekStart = LocalDate.now()
-                .with(WeekFields.of(Locale.getDefault()).getFirstDayOfWeek())
+                .with(WeekFields.of(Locale.getDefault()).dayOfWeek(), 1)
                 .atTime(LocalTime.MIN);
 
         long total = leadRepository.count();
