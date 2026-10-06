@@ -5,6 +5,10 @@ All notable changes to this project are documented here.
 ## [Unreleased]
 
 ### Added
+- README: tech stack (Spring Boot 4.0.8, Spring Security/JWT, Liquibase,
+  Firebase), project layout (new controllers, DTOs, filters, Liquibase
+  changesets, web admin pages) and a pointer to the mobile admin app brought up
+  to date.
 - Added **new-lead push alerts for the mobile admin app** via Firebase Cloud
   Messaging. New admin-only `POST /api/devices` (upsert a phone's FCM token,
   platform `ANDROID`/`IOS`, optional device name) and `DELETE /api/devices/{id}`

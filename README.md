@@ -5,11 +5,19 @@ showcase, testimonials, company info and a contact form, all stored in Postgres 
 served through a REST API. The static page itself is served by the app and populated
 from that API at load time.
 
+The same API also backs the **BuildPro Admin mobile app** (Flutter, Android +
+iPhone), kept in its own repository, `buildpro_admin_app`. The app signs in with a
+bearer token ("Mobile app sign-in" below) and can receive new-lead push alerts
+("Push alerts to the mobile app").
+
 ## Tech stack
 
-- Java 21 (Gradle `sourceCompatibility`/`targetCompatibility` — no toolchain, compiles with whatever JDK is already running Gradle), Spring Boot 4.0.4
-- Spring Web MVC, Spring Data JPA, Bean Validation
-- PostgreSQL
+- Java 21 (Gradle `sourceCompatibility`/`targetCompatibility` — no toolchain, compiles with whatever JDK is already running Gradle), Spring Boot 4.0.8
+- Spring Web MVC, Spring Data JPA, Bean Validation, Spring Mail
+- Spring Security — session + CSRF for the web admin, signed JWT bearer tokens
+  (OAuth2 resource server) for the mobile app
+- PostgreSQL, schema managed by Liquibase
+- Firebase Admin SDK (push alerts to the mobile app; off by default)
 - springdoc-openapi (Swagger UI), Lombok
 - Gradle (wrapper included, `./gradlew`)
 
@@ -17,26 +25,33 @@ from that API at load time.
 
 ```
 src/main/java/com/example/buildpro/
-  entity/       JPA entities (ServiceItem, Stat, ProjectItem, Testimonial, CompanyInfo, HeroSection, AboutSection, Lead)
+  entity/       JPA entities (ServiceItem, Stat, ProjectItem, SamplePlan, Testimonial, CompanyInfo,
+                HeroSection, AboutSection, SiteSectionSettings, Lead, DeviceToken)
   repository/   Spring Data JPA repositories
   service/      Service interfaces
   service/impl/ Service implementations (only these talk to repositories)
   controller/   REST controllers (only these talk to services)
-  dto/          SiteContentResponse — the combined /api/content payload
-  filter/       RequestLoggingFilter — correlation id + request logging
+  dto/          SiteContentResponse (the combined /api/content payload), LeadStats,
+                TokenRequest/TokenResponse/AuthUserResponse (mobile sign-in),
+                DeviceRegistrationRequest (push devices)
+  filter/       RequestLoggingFilter (correlation id + request logging),
+                LeadsRateLimitFilter (contact form), AuthTokenRateLimitFilter (mobile sign-in)
   exception/    GlobalExceptionHandler, ApiError, ResourceNotFoundException
-  config/       OpenApiConfig
+  config/       SecurityConfig (web-admin session chain + mobile bearer-token chain),
+                JwtConfig, CSRF helpers, OpenApiConfig, Liquibase ordering fix
 src/main/resources/
   application.yaml         base config (shared)
   application-local.yaml   local Postgres connection, dev logging, schema auto-update
   application-prod.yaml    validate-only schema, Swagger disabled, no auto-seeding
-  data.sql                 idempotent seed data matching the original static page
+  db/changelog/            Liquibase changesets (001 baseline schema … 008 device tokens);
+                            002 seeds data matching the original static page
   static/index.html        the page itself, fetches its content from /api/content
   static/projects.html     full projects gallery (with a click-to-enlarge lightbox) -
                             linked from index.html's "View All Projects" once there
                             are more than the homepage's 6-item preview
   static/testimonials.html full testimonials list - same "View All" pattern, 3-item
                             homepage preview
+  static/admin/            web admin: login, leads, content
 ```
 
 ## Prerequisites
