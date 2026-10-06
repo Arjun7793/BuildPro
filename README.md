@@ -102,10 +102,15 @@ non-JSON `Accept` headers get `406`).
 | Section visibility (master on/off config) | `/api/site-sections` | GET, GET/{id}, POST\*, PUT/{id}\*, DELETE/{id}\* |
 | Home / Cover section | `/api/hero-section` | GET, GET/{id}, POST\*, PUT/{id}\*, DELETE/{id}\*, POST/{id}/image\* (upload), GET/{id}/image |
 | About Us section | `/api/about-section` | GET, GET/{id}, POST\*, PUT/{id}\*, DELETE/{id}\*, POST/{id}/image\* (upload), GET/{id}/image |
-| Leads (contact form) | `/api/leads` | GET\* (paginated, `?page=&size=`), GET/{id}\*, POST†, DELETE/{id}\* (no PUT) |
+| Leads (contact form) | `/api/leads` | GET\* (paginated, `?name=&from=&to=&page=&size=`), GET/stats\*, GET/{id}\*, POST†, DELETE/{id}\* (no PUT) |
 | Combined content | `/api/content` | GET — everything above in one call, what the page itself fetches |
+| Admin page config | `/api/config` | GET — display timezone for the web admin's leads page |
+| Mobile app sign-in | `/api/auth` | POST/token‡ (username + password → bearer token), GET/me\* (who the token belongs to) |
+| Mobile push devices | `/api/devices` | POST\* (register a phone for new-lead alerts), DELETE/{id}\* |
 
-\* Requires the admin login (see Admin area below). Reading content (`GET`) and
+\* Requires the admin login (see Admin area below) — a session cookie for the web
+admin, or `Authorization: Bearer <token>` from the mobile app (see "Mobile app
+sign-in"). Reading content (`GET`) and
 submitting the contact form (`POST /api/leads`) stay public — the live site and its
 visitors depend on both.
 
@@ -114,6 +119,14 @@ minutes per IP address (configurable via `LEADS_RATE_LIMIT_MAX_REQUESTS` /
 `LEADS_RATE_LIMIT_WINDOW_MINUTES`), to keep the open contact form from being spammed.
 Going over it gets a `429` with a `Retry-After` header instead of reaching the
 database — see `filter/LeadsRateLimitFilter.java`.
+
+‡ `POST /api/auth/token` is public (it's how you sign in) but rate-limited: at most
+10 attempts per 15 minutes per IP address (`AUTH_RATE_LIMIT_MAX_REQUESTS` /
+`AUTH_RATE_LIMIT_WINDOW_MINUTES`) — see `filter/AuthTokenRateLimitFilter.java`.
+
+Interactive docs: with the app running locally, Swagger UI at
+`http://localhost:8080/swagger-ui.html` lists every endpoint (generated from the
+code) and lets you try them. It's disabled in the `prod` profile.
 
 Full curl examples with sample requests and responses are in the "BuildPro API
 curl Reference" doc. Bad requests return a consistent JSON error shape via
