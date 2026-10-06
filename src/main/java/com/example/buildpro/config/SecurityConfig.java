@@ -136,6 +136,8 @@ public class SecurityConfig {
     private static void apiAccessRules(
             AuthorizeHttpRequestsConfigurer<HttpSecurity>.AuthorizationManagerRequestMatcherRegistry auth) {
         auth
+                // Push-alert phone registration (mobile app) - admin-only for every method.
+                .requestMatchers("/api/devices", "/api/devices/**").authenticated()
                 .requestMatchers(HttpMethod.POST, "/api/leads").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/leads", "/api/leads/**").authenticated()
                 .requestMatchers(HttpMethod.DELETE, "/api/leads/**").authenticated()

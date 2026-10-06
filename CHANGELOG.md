@@ -5,6 +5,18 @@ All notable changes to this project are documented here.
 ## [Unreleased]
 
 ### Added
+- Added **new-lead push alerts for the mobile admin app** via Firebase Cloud
+  Messaging. New admin-only `POST /api/devices` (upsert a phone's FCM token,
+  platform `ANDROID`/`IOS`, optional device name) and `DELETE /api/devices/{id}`
+  in `DeviceController`, stored in a new `device_tokens` table (changeset
+  `008-device-tokens.yaml`, entity `DeviceToken`). `LeadServiceImpl.create()` now
+  also calls `PushNotificationService` after the email notification;
+  `FcmPushNotificationServiceImpl` sends on a background thread (title
+  `New lead: <name>`, body = message preview, data `type`/`leadId`), batches up
+  to 500 tokens per request, and deletes tokens Firebase reports as dead. Off by
+  default (`PUSH_NOTIFICATIONS_ENABLED`); needs `FIREBASE_CREDENTIALS_JSON` when
+  on, and fails startup if the credentials are unusable. New dependency:
+  `com.google.firebase:firebase-admin` (Firestore/Storage excluded).
 - Added **bearer-token sign-in for the mobile admin app**. New
   `POST /api/auth/token` (admin username/password -> signed HS256 JWT, 24h by
   default via `JWT_TTL_HOURS`) and `GET /api/auth/me`, in `AuthController`.

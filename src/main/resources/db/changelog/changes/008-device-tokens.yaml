@@ -1,0 +1,53 @@
+databaseChangeLog:
+  # Phones running the mobile admin app that want new-lead push alerts - see
+  # entity/DeviceToken.java and controller/DeviceController.java. One row per
+  # FCM registration token (the app re-registers on every launch, so the
+  # unique constraint on token turns that into an update, not a duplicate).
+  # Rows for tokens Firebase reports as no longer valid (app uninstalled,
+  # token rotated) are deleted automatically after a failed send.
+
+  - changeSet:
+      id: 008-device_tokens
+      author: arjun
+      comment: device_tokens table - FCM registration tokens for mobile admin push alerts
+      changes:
+        - createTable:
+            tableName: device_tokens
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: token
+                  type: VARCHAR(512)
+                  constraints:
+                    nullable: false
+                    unique: true
+                    uniqueConstraintName: uk_device_tokens_token
+              - column:
+                  name: platform
+                  type: VARCHAR(16)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: device_name
+                  type: VARCHAR(100)
+              - column:
+                  name: username
+                  type: VARCHAR(100)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: TIMESTAMP
+                  constraints:
+                    nullable: false
+              - column:
+                  name: last_seen_at
+                  type: TIMESTAMP
+                  constraints:
+                    nullable: false

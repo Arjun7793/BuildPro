@@ -442,3 +442,32 @@ curl -s "$BASE/api/leads/stats" -H "Authorization: Bearer $TOKEN"
 ```
 
 A missing, expired or tampered token gets `401` with a `WWW-Authenticate: Bearer ...` header.
+
+## Push-alert phones — `/api/devices`
+
+Called by the mobile app, so shown with a bearer token (see Mobile app sign-in above).
+
+```bash
+# Register (or refresh) a phone - same token again just updates it
+curl -s -X POST "$BASE/api/devices" \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"token":"<FCM registration token>","platform":"ANDROID","deviceName":"Pixel 8"}'
+
+# Stop alerts to that phone
+curl -s -X DELETE "$BASE/api/devices/1" -H "Authorization: Bearer $TOKEN"
+```
+
+**Response** to `POST /api/devices` (`200 OK`) — the FCM token itself is never echoed back:
+
+```json
+{
+  "id": 1,
+  "platform": "ANDROID",
+  "deviceName": "Pixel 8",
+  "username": "admin",
+  "createdAt": "2026-10-06T22:10:00",
+  "lastSeenAt": "2026-10-06T22:10:00"
+}
+```
+
+`platform` must be `ANDROID` or `IOS`. `DELETE` returns `204`, or `404` for an unknown id.

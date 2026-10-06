@@ -330,6 +330,44 @@ submission itself, since the lead is already saved in Postgres before the
 email is attempted. Check the app logs if you enable this and don't see
 emails arriving.
 
+
+## Push alerts to the mobile app
+
+Besides email, each new contact-form lead can buzz the admin's phone. The mobile
+admin app registers the phone, and the server sends through **Firebase Cloud
+Messaging** (FCM), which reaches Android directly and iPhones via Apple's push
+service — see `service/impl/FcmPushNotificationServiceImpl.java`.
+
+How it fits together:
+
+1. The app signs in (bearer token, see "Mobile app sign-in") and, while
+   **Settings → Notifications → New lead alerts** is on, calls
+   `POST /api/devices` with its FCM token on every launch. That's an upsert, so
+   repeats don't create duplicates. It keeps the returned `id`.
+2. A new lead triggers a push to every registered phone: title
+   `New lead: <name>`, body = the start of their message (or their phone
+   number), plus data `type=NEW_LEAD` and `leadId` so tapping it can open that
+   lead. Sending happens on a background thread, so the contact form never waits.
+3. Turning alerts off or logging out calls `DELETE /api/devices/{id}`.
+4. Tokens Firebase reports as dead (app uninstalled, token replaced) are deleted
+   automatically after a send.
+
+Phones are stored in `device_tokens` (changeset `008-device-tokens.yaml`). Both
+endpoints are admin-only.
+
+| Env var | Required | Default | Purpose |
+| --- | --- | --- | --- |
+| `PUSH_NOTIFICATIONS_ENABLED` | to turn it on | `false` | Set to `true` to send pushes. |
+| `FIREBASE_CREDENTIALS_JSON` | when enabled | *(none)* | The full contents of a Firebase service-account key file. If empty, Google's standard `GOOGLE_APPLICATION_CREDENTIALS` file lookup is used instead. Startup fails if push is enabled and neither works. |
+
+**Firebase setup (one time):** create a Firebase project → add an Android app
+and an iOS app with the Flutter app's package/bundle ids → for iOS, upload an
+APNs auth key under Project settings → Cloud Messaging → then Project settings →
+Service accounts → **Generate new private key**, and paste that file's contents
+into `FIREBASE_CREDENTIALS_JSON`. Treat it like a password; never commit it.
+The Flutter app must create an Android notification channel with id `new_leads`
+(`app.push.android-channel-id`).
+
 ## Deployment
 
 The app is deployed on [Railway](https://railway.app), running the `prod` profile
