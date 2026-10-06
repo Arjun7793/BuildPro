@@ -145,6 +145,7 @@ All set on the `buildpro` service's Variables tab (Raw Editor). Every step used 
 | `SPRING_JPA_HIBERNATE_DDL_AUTO` | `update` | `validate` |
 | `SPRING_SQL_INIT_MODE` | `always` | `never` |
 | `SPRING_JPA_DEFER_DATASOURCE_INITIALIZATION` | `true` | `true` |
+| `JWT_SECRET` | random, 32+ chars (`openssl rand -base64 48`) | same — required by the `prod` profile for mobile app sign-in |
 
 The permanent values matter: leaving `update`/`always` in place would let the app silently alter schema or re-run seed inserts on every future restart or redeploy — `validate`/`never` makes Hibernate check the schema matches the entities (failing loudly if it doesn't) without ever touching data automatically.
 

@@ -3,20 +3,33 @@ package com.example.buildpro.config;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.ProviderManager;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.annotation.web.configurers.AuthorizeHttpRequestsConfigurer;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfFilter;
 import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
+import org.springframework.security.web.util.matcher.AndRequestMatcher;
+import org.springframework.security.web.util.matcher.OrRequestMatcher;
+import org.springframework.security.web.util.matcher.RequestMatcher;
 
 // Protects everything under /admin/**, plus every write (POST/PUT/DELETE) on the
 // site content endpoints (services, stats, projects, sample plans, testimonials, company-info, site-sections)
@@ -40,6 +53,17 @@ import org.springframework.security.web.servlet.util.matcher.PathPatternRequestM
 // Credentials come from admin.username/admin.password (see application.yaml),
 // backed by ADMIN_USERNAME/ADMIN_PASSWORD env vars. Local dev falls back to
 // admin/changeme; prod requires both env vars to be set explicitly (see README).
+//
+// Mobile admin app: a second, stateless filter chain (mobileApiFilterChain,
+// checked first) handles bearer-token requests. It covers /api/auth/** (token
+// sign-in + "who am I") and any /api/** request that carries an
+// "Authorization: Bearer ..." header. Those requests never use the session or
+// cookies, so CSRF doesn't apply to them and is off for that chain only - a
+// browser never attaches a bearer header on its own, which is what CSRF attacks
+// rely on. Everything else (the web admin pages, the public site, cookie-based
+// fetches) still goes through the original session chain below, unchanged. Both
+// chains share the same /api/** access rules (apiAccessRules), so the two can't
+// drift apart.
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
@@ -64,7 +88,80 @@ public class SecurityConfig {
         return new InMemoryUserDetailsManager(admin);
     }
 
+    // Used by POST /api/auth/token (AuthController) to check the admin's
+    // username/password - the same account and encoder the web login uses.
     @Bean
+    public AuthenticationManager authenticationManager(UserDetailsService userDetailsService, PasswordEncoder passwordEncoder) {
+        DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetailsService);
+        provider.setPasswordEncoder(passwordEncoder);
+        return new ProviderManager(provider);
+    }
+
+    // Requests that belong to the mobile app: the auth endpoints themselves, plus
+    // any /api/** call presenting a bearer token.
+    private static final RequestMatcher MOBILE_API_REQUESTS = new OrRequestMatcher(
+            PathPatternRequestMatcher.withDefaults().matcher("/api/auth/**"),
+            new AndRequestMatcher(
+                    PathPatternRequestMatcher.withDefaults().matcher("/api/**"),
+                    request -> {
+                        String header = request.getHeader(HttpHeaders.AUTHORIZATION);
+                        return header != null && header.regionMatches(true, 0, "Bearer ", 0, 7);
+                    }));
+
+    @Bean
+    @Order(1)
+    public SecurityFilterChain mobileApiFilterChain(HttpSecurity http, JwtAuthenticationConverter jwtAuthenticationConverter) throws Exception {
+        http
+                .securityMatcher(MOBILE_API_REQUESTS)
+                // Stateless bearer-token auth: no session, no cookies, so no CSRF.
+                .csrf(AbstractHttpConfigurer::disable)
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(auth -> {
+                    auth.requestMatchers(HttpMethod.POST, "/api/auth/token").permitAll();
+                    auth.requestMatchers("/api/auth/**").authenticated();
+                    apiAccessRules(auth);
+                    auth.anyRequest().permitAll();
+                })
+                // Validates the bearer token (signature, expiry, issuer - see
+                // JwtConfig). A missing/invalid/expired token gets a 401 with a
+                // WWW-Authenticate header, which the app treats as "sign in again".
+                .oauth2ResourceServer(oauth2 -> oauth2
+                        .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter)));
+        return http.build();
+    }
+
+    // Who may call what on /api/** - shared by both chains. Matched in order, so
+    // the specific rules here come before each chain's broad "everything else is
+    // public" rule.
+    private static void apiAccessRules(
+            AuthorizeHttpRequestsConfigurer<HttpSecurity>.AuthorizationManagerRequestMatcherRegistry auth) {
+        auth
+                .requestMatchers(HttpMethod.POST, "/api/leads").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/leads", "/api/leads/**").authenticated()
+                .requestMatchers(HttpMethod.DELETE, "/api/leads/**").authenticated()
+                .requestMatchers(HttpMethod.POST,
+                        "/api/services", "/api/stats", "/api/projects", "/api/sample-plans",
+                        "/api/testimonials", "/api/company-info", "/api/site-sections",
+                        "/api/hero-section", "/api/about-section").authenticated()
+                // Project/sample-plan image upload lives under /api/projects/{id}/image
+                // and /api/sample-plans/{id}/image - not covered by the bare
+                // "/api/projects"/"/api/sample-plans" matches above, so each needs its
+                // own rule or it would fall through to the public catch-all.
+                .requestMatchers(HttpMethod.POST, "/api/projects/*/image", "/api/sample-plans/*/image").authenticated()
+                .requestMatchers(HttpMethod.POST,
+                        "/api/hero-section/*/image", "/api/about-section/*/image").authenticated()
+                .requestMatchers(HttpMethod.PUT,
+                        "/api/services/**", "/api/stats/**", "/api/projects/**", "/api/sample-plans/**",
+                        "/api/testimonials/**", "/api/company-info/**", "/api/site-sections/**",
+                        "/api/hero-section/**", "/api/about-section/**").authenticated()
+                .requestMatchers(HttpMethod.DELETE,
+                        "/api/services/**", "/api/stats/**", "/api/projects/**", "/api/sample-plans/**",
+                        "/api/testimonials/**", "/api/company-info/**", "/api/site-sections/**",
+                        "/api/hero-section/**", "/api/about-section/**").authenticated();
+    }
+
+    @Bean
+    @Order(2)
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(csrf -> csrf
@@ -75,40 +172,18 @@ public class SecurityConfig {
                         .ignoringRequestMatchers(PathPatternRequestMatcher.withDefaults().matcher(HttpMethod.POST, "/api/leads"))
                 )
                 .addFilterAfter(new CsrfCookieFilter(), CsrfFilter.class)
-                .authorizeHttpRequests(auth -> auth
-                        // Rules are matched in order - the more specific rules must come
-                        // before the broad "every GET is public" rule below, otherwise
-                        // that broader match would win first and the specific ones would
-                        // never be reached.
-                        .requestMatchers(HttpMethod.POST, "/api/leads").permitAll()
-                        .requestMatchers("/admin/login", "/admin/login.html").permitAll()
-                        .requestMatchers("/admin", "/admin/**").authenticated()
-                        .requestMatchers(HttpMethod.GET, "/api/leads", "/api/leads/**").authenticated()
-                        .requestMatchers(HttpMethod.DELETE, "/api/leads/**").authenticated()
-                        .requestMatchers(HttpMethod.POST,
-                                "/api/services", "/api/stats", "/api/projects", "/api/sample-plans",
-                                "/api/testimonials", "/api/company-info", "/api/site-sections",
-                                "/api/hero-section", "/api/about-section").authenticated()
-                        // Project/sample-plan image upload lives under /api/projects/{id}/image
-                        // and /api/sample-plans/{id}/image - not covered by the bare
-                        // "/api/projects"/"/api/sample-plans" matches above, so each needs its
-                        // own rule or it would fall through to the public catch-all at the bottom.
-                        .requestMatchers(HttpMethod.POST, "/api/projects/*/image", "/api/sample-plans/*/image").authenticated()
-                        .requestMatchers(HttpMethod.POST,
-                                "/api/hero-section/*/image", "/api/about-section/*/image").authenticated()
-                        .requestMatchers(HttpMethod.PUT,
-                                "/api/services/**", "/api/stats/**", "/api/projects/**", "/api/sample-plans/**",
-                                "/api/testimonials/**", "/api/company-info/**", "/api/site-sections/**",
-                                "/api/hero-section/**", "/api/about-section/**").authenticated()
-                        .requestMatchers(HttpMethod.DELETE,
-                                "/api/services/**", "/api/stats/**", "/api/projects/**", "/api/sample-plans/**",
-                                "/api/testimonials/**", "/api/company-info/**", "/api/site-sections/**",
-                                "/api/hero-section/**", "/api/about-section/**").authenticated()
-                        // Everything else - every GET (the live site's own content
-                        // fetch, /api/content included) and anything not matched above -
-                        // stays public.
-                        .anyRequest().permitAll()
-                )
+                .authorizeHttpRequests(auth -> {
+                    // Rules are matched in order - the more specific rules must come
+                    // before the broad "everything else is public" rule at the end,
+                    // otherwise that broader match would win first.
+                    auth.requestMatchers("/admin/login", "/admin/login.html").permitAll();
+                    auth.requestMatchers("/admin", "/admin/**").authenticated();
+                    apiAccessRules(auth);
+                    // Everything else - every GET (the live site's own content
+                    // fetch, /api/content included) and anything not matched above -
+                    // stays public.
+                    auth.anyRequest().permitAll();
+                })
                 // API calls (fetch from the admin pages) get a clean 401 instead of a
                 // redirect when the session has expired, so the existing "not signed
                 // in" handling in the admin JS keeps working; a direct browser visit

@@ -246,6 +246,39 @@ gets a clean `401` rather than a redirect, so the page can show "not signed in"
 instead of a broken response; a direct browser visit to a protected admin page still
 redirects to `/admin/login` as expected.
 
+### Mobile app sign-in (bearer tokens)
+
+The mobile admin app can't sensibly use the session + CSRF cookies the web admin
+pages rely on, so it signs in with a token instead. Same admin account, same
+access rules — just a different way of proving who you are:
+
+1. `POST /api/auth/token` with `{"username": "...", "password": "..."}` returns
+   `{"accessToken": "...", "tokenType": "Bearer", "expiresIn": 86400, "expiresAt": "..."}`.
+   Wrong credentials get a `401`; more than 10 attempts per 15 minutes from one IP
+   get a `429` (`AUTH_RATE_LIMIT_MAX_REQUESTS` / `AUTH_RATE_LIMIT_WINDOW_MINUTES`,
+   see `filter/AuthTokenRateLimitFilter.java`).
+2. Send it on every call as `Authorization: Bearer <accessToken>`. Any `/api/**`
+   endpoint that needs the admin login accepts it — no cookies or `X-XSRF-TOKEN`
+   needed.
+3. `GET /api/auth/me` returns the token's username, roles and expiry — the app
+   calls it on launch to check a saved token is still good.
+4. An expired or invalid token gets a `401`; the app sends the user back to sign in.
+   There are no refresh tokens yet.
+
+Tokens are JWTs signed with HS256 (`config/JwtConfig.java`). Requests with a bearer
+header (plus `/api/auth/**`) go through their own stateless filter chain in
+`SecurityConfig` with CSRF off — a browser never attaches a bearer header by
+itself, so CSRF doesn't apply. Everything else, including the web admin pages, still
+uses the session chain exactly as before; both chains share one set of `/api/**`
+access rules.
+
+| Env var | Required | Default | Purpose |
+| --- | --- | --- | --- |
+| `JWT_SECRET` | in prod | local-dev value | Token signing secret, at least 32 characters. Generate with `openssl rand -base64 48`. Changing it signs every app user out. |
+| `JWT_TTL_HOURS` | no | `24` | How long a token stays valid. |
+| `AUTH_RATE_LIMIT_MAX_REQUESTS` | no | `10` | Sign-in attempts allowed per IP per window. |
+| `AUTH_RATE_LIMIT_WINDOW_MINUTES` | no | `15` | Length of that window. |
+
 The leads page displays submission times in a configurable timezone
 (`app.display-timezone` in `application.yaml`, backed by the `DISPLAY_TIMEZONE` env
 var, defaulting to `Asia/Kolkata`) — fetched at page load from `GET /api/config`, not

@@ -5,6 +5,19 @@ All notable changes to this project are documented here.
 ## [Unreleased]
 
 ### Added
+- Added **bearer-token sign-in for the mobile admin app**. New
+  `POST /api/auth/token` (admin username/password -> signed HS256 JWT, 24h by
+  default via `JWT_TTL_HOURS`) and `GET /api/auth/me`, in `AuthController`.
+  `SecurityConfig` gains a second, stateless filter chain (checked first) for
+  `/api/auth/**` and any `/api/**` request carrying `Authorization: Bearer`,
+  with CSRF off since no cookies are involved; the existing session chain for the
+  web admin is unchanged, and both now share one `apiAccessRules` method so the
+  `/api/**` rules can't drift apart. Signing/verification lives in `JwtConfig`
+  (secret from `JWT_SECRET`, required in prod, minimum 32 bytes), token building
+  in `AuthTokenServiceImpl`. Sign-in attempts are rate-limited per IP by the new
+  `AuthTokenRateLimitFilter` (10 per 15 minutes by default). Bad credentials now
+  map to a `401` ApiError in `GlobalExceptionHandler`. New dependency:
+  `spring-boot-starter-security-oauth2-resource-server`.
 - Added **Section Visibility** - a master on/off config for which sections of
   the public site are shown at all, controlled from a new singleton admin
   section in `/admin/content`. New entity `SiteSectionSettings` (table

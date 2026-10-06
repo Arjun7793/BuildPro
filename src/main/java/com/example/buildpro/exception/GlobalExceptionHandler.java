@@ -9,6 +9,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -44,6 +45,15 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     public ResponseEntity<ApiError> handleDataIntegrity(DataIntegrityViolationException ex, HttpServletRequest request) {
         log.warn("Data integrity violation on {} {}: {}", request.getMethod(), request.getRequestURI(), ex.getMessage());
         return build(HttpStatus.CONFLICT, "The request conflicts with existing data.", request, null);
+    }
+
+    // Wrong username/password on POST /api/auth/token (the mobile app's sign-in).
+    // One generic message whatever the cause, so a caller can't tell a wrong
+    // username from a wrong password.
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity<ApiError> handleAuthentication(AuthenticationException ex, HttpServletRequest request) {
+        log.info("Failed sign-in on {} {}: {}", request.getMethod(), request.getRequestURI(), ex.getClass().getSimpleName());
+        return build(HttpStatus.UNAUTHORIZED, "Invalid username or password.", request, null);
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
