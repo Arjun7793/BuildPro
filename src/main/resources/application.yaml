@@ -40,6 +40,12 @@ spring:
           auth: true
           starttls:
             enable: true
+          # Give up on an unreachable/slow SMTP server after 10 s instead of
+          # waiting forever (the default). Sending is on a background thread,
+          # so this only bounds how long that thread is stuck.
+          connectiontimeout: 10000
+          timeout: 10000
+          writetimeout: 10000
 
 server:
   port: 8080
