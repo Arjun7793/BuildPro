@@ -5,6 +5,11 @@ All notable changes to this project are documented here.
 ## [Unreleased]
 
 ### Fixed
+- **The contact form no longer waits for the notification email.** It took
+  134 s on Railway because outbound SMTP is blocked there and JavaMail waits
+  forever by default. `LeadNotificationServiceImpl` now sends on a background
+  thread (like push) and `spring.mail` has 10 s connect/read/write timeouts.
+  New `LeadNotificationServiceImplTest`.
 - **Push can no longer take the site down.** If Firebase can't start (bad
   `FIREBASE_CREDENTIALS_JSON`, missing library), `FcmPushNotificationServiceImpl`
   now logs `PUSH NOTIFICATIONS DISABLED` with the cause and the app keeps running

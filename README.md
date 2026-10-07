@@ -358,6 +358,16 @@ submission itself, since the lead is already saved in Postgres before the
 email is attempted. Check the app logs if you enable this and don't see
 emails arriving.
 
+The email is sent on a background thread, so the contact form responds at once
+however slow the mail server is; each SMTP attempt gives up after 10 seconds
+(`spring.mail.properties.mail.smtp.*timeout`). Look for `Sent new-lead
+notification email` or `Failed to send new-lead notification email` in the logs.
+
+**Railway blocks outbound SMTP** (ports 25/465/587) on its Trial and Hobby plans,
+so Gmail SMTP times out there (`MailConnectException: Couldn't connect to host,
+port: smtp.gmail.com, 587`). Either upgrade to Railway Pro, or send through an
+email provider's HTTPS API instead of SMTP.
+
 
 ## Push alerts to the mobile app
 

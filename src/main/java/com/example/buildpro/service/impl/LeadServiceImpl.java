@@ -67,12 +67,11 @@ public class LeadServiceImpl implements LeadService {
         lead.setId(null);
         lead.setCreatedAt(null);
         Lead saved = leadRepository.save(lead);
-        // Best-effort - see LeadNotificationServiceImpl for why a notification
-        // failure never propagates back up to fail this (already-successful)
-        // contact form submission.
+        // Email and push are both best-effort and return immediately - each
+        // sends on its own background thread (see LeadNotificationServiceImpl
+        // and FcmPushNotificationServiceImpl), so the visitor gets the success
+        // response at once and a notification failure never fails the form.
         leadNotificationService.notifyNewLead(saved);
-        // Same best-effort contract, and it returns immediately (sends on a
-        // background thread) - see FcmPushNotificationServiceImpl.
         pushNotificationService.notifyNewLead(saved);
         return saved;
     }

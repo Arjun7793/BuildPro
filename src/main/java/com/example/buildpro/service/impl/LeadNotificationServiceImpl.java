@@ -4,6 +4,7 @@ import com.example.buildpro.entity.CompanyInfo;
 import com.example.buildpro.entity.Lead;
 import com.example.buildpro.service.CompanyInfoService;
 import com.example.buildpro.service.LeadNotificationService;
+import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
@@ -11,6 +12,10 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Emails a recipient whenever a new lead comes in through the public contact
@@ -34,6 +39,11 @@ import java.util.List;
  * saved (see LeadServiceImpl.create()), and the visitor who submitted the
  * form should still get their normal success response regardless of whether
  * the email side of this works.
+ *
+ * Sending happens on a background thread: notifyNewLead() returns at once, so
+ * a slow or unreachable SMTP server can't hold up the contact form (it once
+ * took 134 s when Railway's network blocked SMTP). spring.mail timeouts in
+ * application.yaml cap how long a single attempt can hang that thread.
  */
 @Slf4j
 @Component
@@ -44,6 +54,11 @@ public class LeadNotificationServiceImpl implements LeadNotificationService {
     private final boolean enabled;
     private final String configuredToAddress;
     private final String fromAddress;
+    private final ExecutorService executor = Executors.newSingleThreadExecutor(runnable -> {
+        Thread thread = new Thread(runnable, "lead-email");
+        thread.setDaemon(true);
+        return thread;
+    });
 
     public LeadNotificationServiceImpl(
             JavaMailSender mailSender,
@@ -70,18 +85,34 @@ public class LeadNotificationServiceImpl implements LeadNotificationService {
                     + "admin panel) - skipping notification for lead {}", lead.getId());
             return;
         }
-        try {
-            SimpleMailMessage message = new SimpleMailMessage();
-            if (fromAddress != null && !fromAddress.isBlank()) {
-                message.setFrom(fromAddress);
-            }
-            message.setTo(toAddress);
-            message.setSubject("New lead: " + lead.getName());
-            message.setText(buildBody(lead));
-            mailSender.send(message);
-        } catch (Exception e) {
-            log.error("Failed to send new-lead notification email for lead {}", lead.getId(), e);
+        SimpleMailMessage message = new SimpleMailMessage();
+        if (fromAddress != null && !fromAddress.isBlank()) {
+            message.setFrom(fromAddress);
         }
+        message.setTo(toAddress);
+        message.setSubject("New lead: " + lead.getName());
+        message.setText(buildBody(lead));
+        Long leadId = lead.getId();
+        try {
+            executor.submit(() -> send(message, leadId));
+        } catch (RejectedExecutionException e) {
+            log.error("Could not queue notification email for lead {}", leadId, e);
+        }
+    }
+
+    private void send(SimpleMailMessage message, Long leadId) {
+        try {
+            mailSender.send(message);
+            log.info("Sent new-lead notification email for lead {}", leadId);
+        } catch (Exception e) {
+            log.error("Failed to send new-lead notification email for lead {}", leadId, e);
+        }
+    }
+
+    @PreDestroy
+    void shutdown() throws InterruptedException {
+        executor.shutdown();
+        executor.awaitTermination(10, TimeUnit.SECONDS);
     }
 
     private String resolveToAddress() {
