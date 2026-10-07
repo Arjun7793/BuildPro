@@ -32,8 +32,9 @@ import java.util.concurrent.TimeUnit;
  * notifications, so local dev needs no Firebase project. When enabled it needs a
  * Firebase service-account key: FIREBASE_CREDENTIALS_JSON (the whole JSON file's
  * contents), or, if that's empty, Google's standard GOOGLE_APPLICATION_CREDENTIALS
- * lookup. Bad or missing credentials fail startup rather than silently never
- * sending.
+ * lookup. If Firebase can't be started (bad credentials, missing library) the
+ * error is logged loudly and the app runs with push off - a push problem must
+ * never take the website down. Look for "Push notifications" in the startup log.
  *
  * Sending happens on a background thread, so the contact form's response never
  * waits on Firebase. Failures are logged, never thrown. Tokens Firebase reports
@@ -61,18 +62,33 @@ public class FcmPushNotificationServiceImpl implements PushNotificationService {
             @Value("${app.push.firebase-credentials-json:}") String credentialsJson,
             @Value("${app.push.android-channel-id:new_leads}") String androidChannelId) {
         this.deviceTokenService = deviceTokenService;
-        this.enabled = enabled;
         this.androidChannelId = androidChannelId;
-        if (enabled) {
-            this.messaging = FirebaseMessaging.getInstance(initFirebase(credentialsJson));
-            this.executor = Executors.newSingleThreadExecutor(runnable -> {
-                Thread thread = new Thread(runnable, "push-notifications");
-                thread.setDaemon(true);
-                return thread;
-            });
-        } else {
-            this.messaging = null;
-            this.executor = null;
+        FirebaseMessaging started = enabled ? start(credentialsJson) : null;
+        this.enabled = started != null;
+        this.messaging = started;
+        this.executor = this.enabled
+                ? Executors.newSingleThreadExecutor(runnable -> {
+                    Thread thread = new Thread(runnable, "push-notifications");
+                    thread.setDaemon(true);
+                    return thread;
+                })
+                : null;
+        if (!enabled) {
+            log.info("Push notifications are off (PUSH_NOTIFICATIONS_ENABLED is not true)");
+        }
+    }
+
+    // Returns null (push stays off) instead of failing startup. LinkageError covers
+    // a library missing from the build (NoClassDefFoundError), as seen once in prod.
+    private static FirebaseMessaging start(String credentialsJson) {
+        try {
+            FirebaseApp app = initFirebase(credentialsJson);
+            log.info("Push notifications enabled - Firebase started");
+            return FirebaseMessaging.getInstance(app);
+        } catch (RuntimeException | LinkageError e) {
+            log.error("PUSH NOTIFICATIONS DISABLED: PUSH_NOTIFICATIONS_ENABLED is true but Firebase could not be "
+                    + "started. The site keeps running without push alerts. Cause:", e);
+            return null;
         }
     }
 

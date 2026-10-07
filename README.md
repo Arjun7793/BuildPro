@@ -386,7 +386,7 @@ endpoints are admin-only.
 | Env var | Required | Default | Purpose |
 | --- | --- | --- | --- |
 | `PUSH_NOTIFICATIONS_ENABLED` | to turn it on | `false` | Set to `true` to send pushes. |
-| `FIREBASE_CREDENTIALS_JSON` | when enabled | *(none)* | The full contents of a Firebase service-account key file. If empty, Google's standard `GOOGLE_APPLICATION_CREDENTIALS` file lookup is used instead. Startup fails if push is enabled and neither works. |
+| `FIREBASE_CREDENTIALS_JSON` | when enabled | *(none)* | The full contents of a Firebase service-account key file. If empty, Google's standard `GOOGLE_APPLICATION_CREDENTIALS` file lookup is used instead. If push is enabled and neither works, the error is logged (`PUSH NOTIFICATIONS DISABLED`) and the site runs without push. |
 
 **Firebase setup (one time):** create a Firebase project → add an Android app
 and an iOS app with the Flutter app's package/bundle ids → for iOS, upload an
