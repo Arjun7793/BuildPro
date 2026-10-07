@@ -3,9 +3,8 @@ package com.example.buildpro.service.impl;
 import com.example.buildpro.entity.Lead;
 import com.example.buildpro.service.CompanyInfoService;
 import org.junit.jupiter.api.Test;
-import org.springframework.mail.MailSendException;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
+import com.example.buildpro.service.mail.EmailSender;
+import com.example.buildpro.service.mail.EmailSender.EmailMessage;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -28,14 +27,14 @@ class LeadNotificationServiceImplTest {
 
     @Test
     void returnsImmediatelyWhileTheEmailIsStillSending() throws Exception {
-        JavaMailSender mailSender = mock(JavaMailSender.class);
+        EmailSender mailSender = mock(EmailSender.class);
         CountDownLatch release = new CountDownLatch(1);
         CountDownLatch sent = new CountDownLatch(1);
         doAnswer(invocation -> {
             release.await(5, TimeUnit.SECONDS); // a slow SMTP server
             sent.countDown();
             return null;
-        }).when(mailSender).send(any(SimpleMailMessage.class));
+        }).when(mailSender).send(any(EmailMessage.class));
         LeadNotificationServiceImpl service = new LeadNotificationServiceImpl(
                 mailSender, mock(CompanyInfoService.class), true, "admin@example.com", "");
 
@@ -46,26 +45,26 @@ class LeadNotificationServiceImplTest {
         assertTrue(tookMs < 1000, "notifyNewLead waited for SMTP (" + tookMs + " ms)");
         release.countDown();
         assertTrue(sent.await(5, TimeUnit.SECONDS), "email was never sent");
-        verify(mailSender).send(argThat((SimpleMailMessage m) ->
-                "New lead: Ravi".equals(m.getSubject()) && m.getTo()[0].equals("admin@example.com")));
+        verify(mailSender).send(argThat((EmailMessage m) ->
+                "New lead: Ravi".equals(m.subject()) && "admin@example.com".equals(m.to())));
         service.shutdown();
     }
 
     @Test
     void aFailedSendIsOnlyLogged() throws Exception {
-        JavaMailSender mailSender = mock(JavaMailSender.class);
-        doThrow(new MailSendException("Couldn't connect to host")).when(mailSender).send(any(SimpleMailMessage.class));
+        EmailSender mailSender = mock(EmailSender.class);
+        doThrow(new IllegalStateException("Resend rejected the email: HTTP 403")).when(mailSender).send(any(EmailMessage.class));
         LeadNotificationServiceImpl service = new LeadNotificationServiceImpl(
                 mailSender, mock(CompanyInfoService.class), true, "admin@example.com", "");
 
         assertDoesNotThrow(() -> service.notifyNewLead(lead()));
         service.shutdown(); // waits for the background attempt
-        verify(mailSender).send(any(SimpleMailMessage.class));
+        verify(mailSender).send(any(EmailMessage.class));
     }
 
     @Test
     void disabledSendsNothing() throws Exception {
-        JavaMailSender mailSender = mock(JavaMailSender.class);
+        EmailSender mailSender = mock(EmailSender.class);
         LeadNotificationServiceImpl service = new LeadNotificationServiceImpl(
                 mailSender, mock(CompanyInfoService.class), false, "admin@example.com", "");
         service.notifyNewLead(lead());

@@ -4,6 +4,14 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+### Added
+- **Email over HTTPS (Resend or Brevo)**, for hosts that block SMTP such as
+  Railway. New `service/mail/EmailSender` with `SmtpEmailSender` (default),
+  `ResendEmailSender` and `BrevoEmailSender`, chosen by `MAIL_PROVIDER`
+  (`smtp`/`resend`/`brevo`) with `MAIL_API_KEY`; 10 s timeouts, and a rejected
+  send logs the provider's reason. `LeadNotificationServiceImpl` now sends via
+  `EmailSender`. New `HttpEmailSenderTest`.
+
 ### Fixed
 - **The contact form no longer waits for the notification email.** It took
   134 s on Railway because outbound SMTP is blocked there and JavaMail waits

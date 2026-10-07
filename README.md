@@ -327,7 +327,9 @@ you don't have to keep checking `/admin/leads` manually — see
 | `MAIL_PASSWORD` | when enabled | *(none)* | An **app password**, not the account's normal login password (see below for Gmail). |
 | `MAIL_HOST` | no | `smtp.gmail.com` | SMTP host. |
 | `MAIL_PORT` | no | `587` | SMTP port (STARTTLS). |
-| `MAIL_FROM` | no | `MAIL_USERNAME`'s value | Override the `From:` address shown to the recipient. |
+| `MAIL_FROM` | no | `MAIL_USERNAME`'s value | Override the `From:` address shown to the recipient (`Name <address>` or a bare address). Required for `resend`/`brevo`. |
+| `MAIL_PROVIDER` | no | `smtp` | How mail is sent: `smtp` (the `MAIL_HOST`... settings), `resend` or `brevo` (HTTPS APIs - use these on Railway). |
+| `MAIL_API_KEY` | for `resend`/`brevo` | *(none)* | The provider's API key. Treat it like a password. |
 
 **Who receives it:** if `LEAD_NOTIFICATION_EMAIL` is set, that address always
 wins. Otherwise it falls back to the **Company Info** section's `email` field —
@@ -365,8 +367,27 @@ notification email` or `Failed to send new-lead notification email` in the logs.
 
 **Railway blocks outbound SMTP** (ports 25/465/587) on its Trial and Hobby plans,
 so Gmail SMTP times out there (`MailConnectException: Couldn't connect to host,
-port: smtp.gmail.com, 587`). Either upgrade to Railway Pro, or send through an
-email provider's HTTPS API instead of SMTP.
+port: smtp.gmail.com, 587`). Use one of the HTTPS providers instead
+(`service/mail/`), which only need outbound HTTPS:
+
+**Resend** (`MAIL_PROVIDER=resend`) — resend.com, free tier.
+1. Sign up, then **API Keys → Create API key** (sending access) → `MAIL_API_KEY`.
+2. Without your own domain: `MAIL_FROM=BuildPro <onboarding@resend.dev>`. Resend
+   then only delivers to **the email address you signed up with**, so set
+   `LEAD_NOTIFICATION_EMAIL` to that address.
+3. With a domain: add and verify it under **Domains** (DNS records), then use
+   e.g. `MAIL_FROM=BuildPro <leads@yourdomain.com>` and any recipient.
+
+**Brevo** (`MAIL_PROVIDER=brevo`) — brevo.com, free tier of 300 emails/day.
+1. Sign up, then **SMTP & API → API keys → Generate** → `MAIL_API_KEY` (starts
+   `xkeysib-`).
+2. **Senders, domains & IPs → Senders → Add a sender** with an address you own
+   (your Gmail works) and confirm the email Brevo sends. Use it as `MAIL_FROM`.
+3. Any recipient works. Mail "from" a Gmail address sent via Brevo may land in
+   spam the first time - mark it "Not spam".
+
+A rejected send logs the provider's reason, e.g. `Resend rejected the email:
+HTTP 403 ...` (usually an unverified sender or recipient).
 
 
 ## Push alerts to the mobile app
