@@ -5,6 +5,11 @@ All notable changes to this project are documented here.
 ## [Unreleased]
 
 ### Fixed
+- **Push can no longer take the site down.** If Firebase can't start (bad
+  `FIREBASE_CREDENTIALS_JSON`, missing library), `FcmPushNotificationServiceImpl`
+  now logs `PUSH NOTIFICATIONS DISABLED` with the cause and the app keeps running
+  with push off, instead of failing startup. Startup also logs
+  `Push notifications enabled - Firebase started` or `... are off`.
 - Fixed **startup crash when push alerts are enabled**
   (`PUSH_NOTIFICATIONS_ENABLED=true`): `NoClassDefFoundError:
   com/google/api/client/json/jackson2/JacksonFactory` from `FirebaseOptions`.

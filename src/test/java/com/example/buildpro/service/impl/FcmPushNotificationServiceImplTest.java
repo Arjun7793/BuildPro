@@ -30,4 +30,11 @@ class FcmPushNotificationServiceImplTest {
         FcmPushNotificationServiceImpl service = new FcmPushNotificationServiceImpl(null, false, "", "new_leads");
         assertDoesNotThrow(() -> service.notifyNewLead(new com.example.buildpro.entity.Lead()));
     }
+
+    @Test
+    void badCredentialsTurnPushOffInsteadOfFailingStartup() {
+        FcmPushNotificationServiceImpl service =
+                assertDoesNotThrow(() -> new FcmPushNotificationServiceImpl(null, true, "{not valid json", "new_leads"));
+        assertDoesNotThrow(() -> service.notifyNewLead(new com.example.buildpro.entity.Lead()));
+    }
 }
