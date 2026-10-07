@@ -30,11 +30,10 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
 	implementation 'org.springframework.boot:spring-boot-starter-mail'
 	// New-lead push alerts to the mobile admin app (FCM) - see FcmPushNotificationServiceImpl.
-	// Only Cloud Messaging is used, so Firestore/Storage (pulled in by default) are excluded.
-	implementation('com.google.firebase:firebase-admin:9.4.1') {
-		exclude group: 'com.google.cloud', module: 'google-cloud-firestore'
-		exclude group: 'com.google.cloud', module: 'google-cloud-storage'
-	}
+	// Keep firebase-admin's full dependency set: excluding Firestore/Storage also removed
+	// google-http-client-jackson2, which FirebaseOptions needs at startup
+	// (NoClassDefFoundError: JacksonFactory). FirebaseInitTest guards this.
+	implementation 'com.google.firebase:firebase-admin:9.4.1'
 	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:3.1.1'
 	runtimeOnly 'org.postgresql:postgresql'
 	compileOnly 'org.projectlombok:lombok'

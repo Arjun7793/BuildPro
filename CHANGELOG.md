@@ -4,6 +4,15 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+### Fixed
+- Fixed **startup crash when push alerts are enabled**
+  (`PUSH_NOTIFICATIONS_ENABLED=true`): `NoClassDefFoundError:
+  com/google/api/client/json/jackson2/JacksonFactory` from `FirebaseOptions`.
+  Excluding Firestore/Storage from `firebase-admin` had also removed
+  `google-http-client-jackson2`; the exclusions are gone, and the new
+  `FirebaseInitTest` builds Firebase the same way the service does so a missing
+  library fails the build instead of production.
+
 ### Added
 - README: tech stack (Spring Boot 4.0.8, Spring Security/JWT, Liquibase,
   Firebase), project layout (new controllers, DTOs, filters, Liquibase
