@@ -5,11 +5,19 @@ showcase, testimonials, company info and a contact form, all stored in Postgres 
 served through a REST API. The static page itself is served by the app and populated
 from that API at load time.
 
+The same API also backs the **BuildPro Admin mobile app** (Flutter, Android +
+iPhone), kept in its own repository, `buildpro_admin_app`. The app signs in with a
+bearer token ("Mobile app sign-in" below) and can receive new-lead push alerts
+("Push alerts to the mobile app").
+
 ## Tech stack
 
-- Java 21 (Gradle `sourceCompatibility`/`targetCompatibility` — no toolchain, compiles with whatever JDK is already running Gradle), Spring Boot 4.0.4
-- Spring Web MVC, Spring Data JPA, Bean Validation
-- PostgreSQL
+- Java 21 (Gradle `sourceCompatibility`/`targetCompatibility` — no toolchain, compiles with whatever JDK is already running Gradle), Spring Boot 4.0.8
+- Spring Web MVC, Spring Data JPA, Bean Validation, Spring Mail
+- Spring Security — session + CSRF for the web admin, signed JWT bearer tokens
+  (OAuth2 resource server) for the mobile app
+- PostgreSQL, schema managed by Liquibase
+- Firebase Admin SDK (push alerts to the mobile app; off by default)
 - springdoc-openapi (Swagger UI), Lombok
 - Gradle (wrapper included, `./gradlew`)
 
@@ -17,26 +25,33 @@ from that API at load time.
 
 ```
 src/main/java/com/example/buildpro/
-  entity/       JPA entities (ServiceItem, Stat, ProjectItem, Testimonial, CompanyInfo, HeroSection, AboutSection, Lead)
+  entity/       JPA entities (ServiceItem, Stat, ProjectItem, SamplePlan, Testimonial, CompanyInfo,
+                HeroSection, AboutSection, SiteSectionSettings, Lead, DeviceToken)
   repository/   Spring Data JPA repositories
   service/      Service interfaces
   service/impl/ Service implementations (only these talk to repositories)
   controller/   REST controllers (only these talk to services)
-  dto/          SiteContentResponse — the combined /api/content payload
-  filter/       RequestLoggingFilter — correlation id + request logging
+  dto/          SiteContentResponse (the combined /api/content payload), LeadStats,
+                TokenRequest/TokenResponse/AuthUserResponse (mobile sign-in),
+                DeviceRegistrationRequest (push devices)
+  filter/       RequestLoggingFilter (correlation id + request logging),
+                LeadsRateLimitFilter (contact form), AuthTokenRateLimitFilter (mobile sign-in)
   exception/    GlobalExceptionHandler, ApiError, ResourceNotFoundException
-  config/       OpenApiConfig
+  config/       SecurityConfig (web-admin session chain + mobile bearer-token chain),
+                JwtConfig, CSRF helpers, OpenApiConfig, Liquibase ordering fix
 src/main/resources/
   application.yaml         base config (shared)
   application-local.yaml   local Postgres connection, dev logging, schema auto-update
   application-prod.yaml    validate-only schema, Swagger disabled, no auto-seeding
-  data.sql                 idempotent seed data matching the original static page
+  db/changelog/            Liquibase changesets (001 baseline schema … 008 device tokens);
+                            002 seeds data matching the original static page
   static/index.html        the page itself, fetches its content from /api/content
   static/projects.html     full projects gallery (with a click-to-enlarge lightbox) -
                             linked from index.html's "View All Projects" once there
                             are more than the homepage's 6-item preview
   static/testimonials.html full testimonials list - same "View All" pattern, 3-item
                             homepage preview
+  static/admin/            web admin: login, leads, content
 ```
 
 ## Prerequisites
@@ -102,10 +117,15 @@ non-JSON `Accept` headers get `406`).
 | Section visibility (master on/off config) | `/api/site-sections` | GET, GET/{id}, POST\*, PUT/{id}\*, DELETE/{id}\* |
 | Home / Cover section | `/api/hero-section` | GET, GET/{id}, POST\*, PUT/{id}\*, DELETE/{id}\*, POST/{id}/image\* (upload), GET/{id}/image |
 | About Us section | `/api/about-section` | GET, GET/{id}, POST\*, PUT/{id}\*, DELETE/{id}\*, POST/{id}/image\* (upload), GET/{id}/image |
-| Leads (contact form) | `/api/leads` | GET\* (paginated, `?page=&size=`), GET/{id}\*, POST†, DELETE/{id}\* (no PUT) |
+| Leads (contact form) | `/api/leads` | GET\* (paginated, `?name=&from=&to=&page=&size=`), GET/stats\*, GET/{id}\*, POST†, DELETE/{id}\* (no PUT) |
 | Combined content | `/api/content` | GET — everything above in one call, what the page itself fetches |
+| Admin page config | `/api/config` | GET — display timezone for the web admin's leads page |
+| Mobile app sign-in | `/api/auth` | POST/token‡ (username + password → bearer token), GET/me\* (who the token belongs to) |
+| Mobile push devices | `/api/devices` | POST\* (register a phone for new-lead alerts), DELETE/{id}\* |
 
-\* Requires the admin login (see Admin area below). Reading content (`GET`) and
+\* Requires the admin login (see Admin area below) — a session cookie for the web
+admin, or `Authorization: Bearer <token>` from the mobile app (see "Mobile app
+sign-in"). Reading content (`GET`) and
 submitting the contact form (`POST /api/leads`) stay public — the live site and its
 visitors depend on both.
 
@@ -114,6 +134,14 @@ minutes per IP address (configurable via `LEADS_RATE_LIMIT_MAX_REQUESTS` /
 `LEADS_RATE_LIMIT_WINDOW_MINUTES`), to keep the open contact form from being spammed.
 Going over it gets a `429` with a `Retry-After` header instead of reaching the
 database — see `filter/LeadsRateLimitFilter.java`.
+
+‡ `POST /api/auth/token` is public (it's how you sign in) but rate-limited: at most
+10 attempts per 15 minutes per IP address (`AUTH_RATE_LIMIT_MAX_REQUESTS` /
+`AUTH_RATE_LIMIT_WINDOW_MINUTES`) — see `filter/AuthTokenRateLimitFilter.java`.
+
+Interactive docs: with the app running locally, Swagger UI at
+`http://localhost:8080/swagger-ui.html` lists every endpoint (generated from the
+code) and lets you try them. It's disabled in the `prod` profile.
 
 Full curl examples with sample requests and responses are in the "BuildPro API
 curl Reference" doc. Bad requests return a consistent JSON error shape via
@@ -246,6 +274,39 @@ gets a clean `401` rather than a redirect, so the page can show "not signed in"
 instead of a broken response; a direct browser visit to a protected admin page still
 redirects to `/admin/login` as expected.
 
+### Mobile app sign-in (bearer tokens)
+
+The mobile admin app can't sensibly use the session + CSRF cookies the web admin
+pages rely on, so it signs in with a token instead. Same admin account, same
+access rules — just a different way of proving who you are:
+
+1. `POST /api/auth/token` with `{"username": "...", "password": "..."}` returns
+   `{"accessToken": "...", "tokenType": "Bearer", "expiresIn": 86400, "expiresAt": "..."}`.
+   Wrong credentials get a `401`; more than 10 attempts per 15 minutes from one IP
+   get a `429` (`AUTH_RATE_LIMIT_MAX_REQUESTS` / `AUTH_RATE_LIMIT_WINDOW_MINUTES`,
+   see `filter/AuthTokenRateLimitFilter.java`).
+2. Send it on every call as `Authorization: Bearer <accessToken>`. Any `/api/**`
+   endpoint that needs the admin login accepts it — no cookies or `X-XSRF-TOKEN`
+   needed.
+3. `GET /api/auth/me` returns the token's username, roles and expiry — the app
+   calls it on launch to check a saved token is still good.
+4. An expired or invalid token gets a `401`; the app sends the user back to sign in.
+   There are no refresh tokens yet.
+
+Tokens are JWTs signed with HS256 (`config/JwtConfig.java`). Requests with a bearer
+header (plus `/api/auth/**`) go through their own stateless filter chain in
+`SecurityConfig` with CSRF off — a browser never attaches a bearer header by
+itself, so CSRF doesn't apply. Everything else, including the web admin pages, still
+uses the session chain exactly as before; both chains share one set of `/api/**`
+access rules.
+
+| Env var | Required | Default | Purpose |
+| --- | --- | --- | --- |
+| `JWT_SECRET` | in prod | local-dev value | Token signing secret, at least 32 characters. Generate with `openssl rand -base64 48`. Changing it signs every app user out. |
+| `JWT_TTL_HOURS` | no | `24` | How long a token stays valid. |
+| `AUTH_RATE_LIMIT_MAX_REQUESTS` | no | `10` | Sign-in attempts allowed per IP per window. |
+| `AUTH_RATE_LIMIT_WINDOW_MINUTES` | no | `15` | Length of that window. |
+
 The leads page displays submission times in a configurable timezone
 (`app.display-timezone` in `application.yaml`, backed by the `DISPLAY_TIMEZONE` env
 var, defaulting to `Asia/Kolkata`) — fetched at page load from `GET /api/config`, not
@@ -296,6 +357,44 @@ resolved) is only logged server-side — it never fails the contact form
 submission itself, since the lead is already saved in Postgres before the
 email is attempted. Check the app logs if you enable this and don't see
 emails arriving.
+
+
+## Push alerts to the mobile app
+
+Besides email, each new contact-form lead can buzz the admin's phone. The mobile
+admin app registers the phone, and the server sends through **Firebase Cloud
+Messaging** (FCM), which reaches Android directly and iPhones via Apple's push
+service — see `service/impl/FcmPushNotificationServiceImpl.java`.
+
+How it fits together:
+
+1. The app signs in (bearer token, see "Mobile app sign-in") and, while
+   **Settings → Notifications → New lead alerts** is on, calls
+   `POST /api/devices` with its FCM token on every launch. That's an upsert, so
+   repeats don't create duplicates. It keeps the returned `id`.
+2. A new lead triggers a push to every registered phone: title
+   `New lead: <name>`, body = the start of their message (or their phone
+   number), plus data `type=NEW_LEAD` and `leadId` so tapping it can open that
+   lead. Sending happens on a background thread, so the contact form never waits.
+3. Turning alerts off or logging out calls `DELETE /api/devices/{id}`.
+4. Tokens Firebase reports as dead (app uninstalled, token replaced) are deleted
+   automatically after a send.
+
+Phones are stored in `device_tokens` (changeset `008-device-tokens.yaml`). Both
+endpoints are admin-only.
+
+| Env var | Required | Default | Purpose |
+| --- | --- | --- | --- |
+| `PUSH_NOTIFICATIONS_ENABLED` | to turn it on | `false` | Set to `true` to send pushes. |
+| `FIREBASE_CREDENTIALS_JSON` | when enabled | *(none)* | The full contents of a Firebase service-account key file. If empty, Google's standard `GOOGLE_APPLICATION_CREDENTIALS` file lookup is used instead. Startup fails if push is enabled and neither works. |
+
+**Firebase setup (one time):** create a Firebase project → add an Android app
+and an iOS app with the Flutter app's package/bundle ids → for iOS, upload an
+APNs auth key under Project settings → Cloud Messaging → then Project settings →
+Service accounts → **Generate new private key**, and paste that file's contents
+into `FIREBASE_CREDENTIALS_JSON`. Treat it like a password; never commit it.
+The Flutter app must create an Android notification channel with id `new_leads`
+(`app.push.android-channel-id`).
 
 ## Deployment
 

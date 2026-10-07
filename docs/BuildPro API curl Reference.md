@@ -22,6 +22,14 @@ BASE=http://localhost:8080
 > CSRF=$(grep XSRF-TOKEN cookies.txt | awk '{print $7}')
 > # then add -b cookies.txt -H "X-XSRF-TOKEN: $CSRF" to any POST/PUT/DELETE below
 > ```
+>
+> Or, the way the mobile app does it - a bearer token, no cookies or CSRF header:
+>
+> ```bash
+> TOKEN=$(curl -s -X POST "$BASE/api/auth/token" -H "Content-Type: application/json" \
+>   -d "{\"username\":\"admin\",\"password\":\"$ADMIN_PASSWORD\"}" | jq -r .accessToken)
+> # then add -H "Authorization: Bearer $TOKEN" to any admin-only call below
+> ```
 
 ### Combined content (what the page itself fetches)
 
@@ -388,3 +396,78 @@ curl -s -X DELETE $BASE/api/leads/1 -w "%{http_code}\n"
 ```json
 {"total": 42, "today": 3, "thisWeek": 11}
 ```
+
+## Mobile app sign-in — `/api/auth`
+
+```bash
+# Sign in - returns a bearer token (401 on wrong credentials, 429 after 10 tries / 15 min per IP)
+curl -s -X POST "$BASE/api/auth/token" \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","password":"<admin password>"}'
+
+# Who am I? (requires the token)
+curl -s "$BASE/api/auth/me" -H "Authorization: Bearer $TOKEN"
+
+# Any admin-only call works the same way, e.g. the dashboard counters
+curl -s "$BASE/api/leads/stats" -H "Authorization: Bearer $TOKEN"
+```
+
+**Response** to `POST /api/auth/token` (`200 OK`)
+
+```json
+{
+  "accessToken": "eyJhbGciOiJIUzI1NiJ9...",
+  "tokenType": "Bearer",
+  "expiresIn": 86400,
+  "expiresAt": "2026-10-07T16:30:00Z"
+}
+```
+
+**Response** to wrong credentials (`401 Unauthorized`)
+
+```json
+{
+  "timestamp": "2026-10-06T22:00:00",
+  "status": 401,
+  "error": "Unauthorized",
+  "message": "Invalid username or password.",
+  "path": "/api/auth/token"
+}
+```
+
+**Response** to `GET /api/auth/me` (`200 OK`)
+
+```json
+{"username": "admin", "roles": ["ROLE_ADMIN"], "expiresAt": "2026-10-07T16:30:00Z"}
+```
+
+A missing, expired or tampered token gets `401` with a `WWW-Authenticate: Bearer ...` header.
+
+## Push-alert phones — `/api/devices`
+
+Called by the mobile app, so shown with a bearer token (see Mobile app sign-in above).
+
+```bash
+# Register (or refresh) a phone - same token again just updates it
+curl -s -X POST "$BASE/api/devices" \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"token":"<FCM registration token>","platform":"ANDROID","deviceName":"Pixel 8"}'
+
+# Stop alerts to that phone
+curl -s -X DELETE "$BASE/api/devices/1" -H "Authorization: Bearer $TOKEN"
+```
+
+**Response** to `POST /api/devices` (`200 OK`) — the FCM token itself is never echoed back:
+
+```json
+{
+  "id": 1,
+  "platform": "ANDROID",
+  "deviceName": "Pixel 8",
+  "username": "admin",
+  "createdAt": "2026-10-06T22:10:00",
+  "lastSeenAt": "2026-10-06T22:10:00"
+}
+```
+
+`platform` must be `ANDROID` or `IOS`. `DELETE` returns `204`, or `404` for an unknown id.

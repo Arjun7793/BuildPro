@@ -29,3 +29,9 @@ springdoc:
 admin:
   username: ${ADMIN_USERNAME}
   password: ${ADMIN_PASSWORD}
+
+# Same rule for the mobile app's token-signing secret - no fallback in prod.
+# Generate one with: openssl rand -base64 48
+app:
+  jwt:
+    secret: ${JWT_SECRET}

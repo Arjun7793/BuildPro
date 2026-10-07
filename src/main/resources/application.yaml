@@ -90,4 +90,29 @@ app:
     enabled: ${LEAD_NOTIFICATIONS_ENABLED:false}
     to: ${LEAD_NOTIFICATION_EMAIL:}
     from: ${MAIL_FROM:${spring.mail.username:}}
+  # Bearer tokens for the mobile admin app (POST /api/auth/token - see
+  # config/JwtConfig.java and controller/AuthController.java). The secret signs
+  # every token (HS256) and must be at least 32 characters; the default below is
+  # for local dev only - prod requires JWT_SECRET (see application-prod.yaml).
+  # Changing the secret signs every app user out.
+  jwt:
+    secret: ${JWT_SECRET:local-dev-only-jwt-secret-do-not-use-in-prod-0123456789}
+    issuer: buildpro
+    ttl-hours: ${JWT_TTL_HOURS:24}
+  # New-lead push alerts to phones running the mobile admin app (see
+  # service/impl/FcmPushNotificationServiceImpl.java). Off by default so local dev
+  # needs no Firebase project. To enable: PUSH_NOTIFICATIONS_ENABLED=true plus
+  # FIREBASE_CREDENTIALS_JSON = the full contents of a Firebase service-account
+  # key file (Firebase console -> Project settings -> Service accounts ->
+  # Generate new private key). android-channel-id must match the notification
+  # channel the Flutter app creates.
+  push:
+    enabled: ${PUSH_NOTIFICATIONS_ENABLED:false}
+    firebase-credentials-json: ${FIREBASE_CREDENTIALS_JSON:}
+    android-channel-id: new_leads
+  # Per-IP limit on POST /api/auth/token sign-in attempts - see
+  # filter/AuthTokenRateLimitFilter.java.
+  auth-rate-limit:
+    max-requests: ${AUTH_RATE_LIMIT_MAX_REQUESTS:10}
+    window-minutes: ${AUTH_RATE_LIMIT_WINDOW_MINUTES:15}
 

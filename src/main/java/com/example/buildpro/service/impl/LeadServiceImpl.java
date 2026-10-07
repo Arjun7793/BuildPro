@@ -6,6 +6,7 @@ import com.example.buildpro.repository.LeadRepository;
 import com.example.buildpro.repository.LeadSpecifications;
 import com.example.buildpro.service.LeadNotificationService;
 import com.example.buildpro.service.LeadService;
+import com.example.buildpro.service.PushNotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -27,6 +28,7 @@ public class LeadServiceImpl implements LeadService {
 
     private final LeadRepository leadRepository;
     private final LeadNotificationService leadNotificationService;
+    private final PushNotificationService pushNotificationService;
 
     @Override
     public Page<Lead> search(String name, LocalDate from, LocalDate to, Pageable pageable) {
@@ -69,6 +71,9 @@ public class LeadServiceImpl implements LeadService {
         // failure never propagates back up to fail this (already-successful)
         // contact form submission.
         leadNotificationService.notifyNewLead(saved);
+        // Same best-effort contract, and it returns immediately (sends on a
+        // background thread) - see FcmPushNotificationServiceImpl.
+        pushNotificationService.notifyNewLead(saved);
         return saved;
     }
 
