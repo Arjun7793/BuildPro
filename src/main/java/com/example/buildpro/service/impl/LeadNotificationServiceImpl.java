@@ -7,8 +7,8 @@ import com.example.buildpro.service.LeadNotificationService;
 import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
+import com.example.buildpro.service.mail.EmailSender;
+import com.example.buildpro.service.mail.EmailSender.EmailMessage;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -42,14 +42,15 @@ import java.util.concurrent.TimeUnit;
  *
  * Sending happens on a background thread: notifyNewLead() returns at once, so
  * a slow or unreachable SMTP server can't hold up the contact form (it once
- * took 134 s when Railway's network blocked SMTP). spring.mail timeouts in
- * application.yaml cap how long a single attempt can hang that thread.
+ * took 134 s when Railway's network blocked SMTP). The actual sending is done
+ * by the EmailSender picked with MAIL_PROVIDER (smtp, resend or brevo), each with
+ * 10 s timeouts.
  */
 @Slf4j
 @Component
 public class LeadNotificationServiceImpl implements LeadNotificationService {
 
-    private final JavaMailSender mailSender;
+    private final EmailSender emailSender;
     private final CompanyInfoService companyInfoService;
     private final boolean enabled;
     private final String configuredToAddress;
@@ -61,12 +62,12 @@ public class LeadNotificationServiceImpl implements LeadNotificationService {
     });
 
     public LeadNotificationServiceImpl(
-            JavaMailSender mailSender,
+            EmailSender emailSender,
             CompanyInfoService companyInfoService,
             @Value("${app.lead-notifications.enabled:false}") boolean enabled,
             @Value("${app.lead-notifications.to:}") String configuredToAddress,
             @Value("${app.lead-notifications.from:}") String fromAddress) {
-        this.mailSender = mailSender;
+        this.emailSender = emailSender;
         this.companyInfoService = companyInfoService;
         this.enabled = enabled;
         this.configuredToAddress = configuredToAddress;
@@ -85,13 +86,7 @@ public class LeadNotificationServiceImpl implements LeadNotificationService {
                     + "admin panel) - skipping notification for lead {}", lead.getId());
             return;
         }
-        SimpleMailMessage message = new SimpleMailMessage();
-        if (fromAddress != null && !fromAddress.isBlank()) {
-            message.setFrom(fromAddress);
-        }
-        message.setTo(toAddress);
-        message.setSubject("New lead: " + lead.getName());
-        message.setText(buildBody(lead));
+        EmailMessage message = new EmailMessage(fromAddress, toAddress, "New lead: " + lead.getName(), buildBody(lead));
         Long leadId = lead.getId();
         try {
             executor.submit(() -> send(message, leadId));
@@ -100,9 +95,9 @@ public class LeadNotificationServiceImpl implements LeadNotificationService {
         }
     }
 
-    private void send(SimpleMailMessage message, Long leadId) {
+    private void send(EmailMessage message, Long leadId) {
         try {
-            mailSender.send(message);
+            emailSender.send(message);
             log.info("Sent new-lead notification email for lead {}", leadId);
         } catch (Exception e) {
             log.error("Failed to send new-lead notification email for lead {}", leadId, e);

@@ -92,6 +92,12 @@ app:
   # env vars below and LEAD_NOTIFICATION_EMAIL (who receives them). A failed send
   # (bad credentials, SMTP down) is only logged - it never fails the contact form
   # submission itself, since the lead is already saved in Postgres by then.
+  # How emails are sent (service/mail/EmailSender.java): smtp (default, uses
+  # spring.mail above), resend or brevo (HTTPS APIs, need MAIL_API_KEY). Railway
+  # blocks outbound SMTP on Trial/Hobby plans, so use resend or brevo there.
+  mail:
+    provider: ${MAIL_PROVIDER:smtp}
+    api-key: ${MAIL_API_KEY:}
   lead-notifications:
     enabled: ${LEAD_NOTIFICATIONS_ENABLED:false}
     to: ${LEAD_NOTIFICATION_EMAIL:}
